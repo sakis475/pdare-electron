@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 
-import { BASE_DOMAIN, BASE_URL } from "../../env";
+import { BASE_DOMAIN, BASE_URL } from "../../../env";
 
 export async function getRequest(url: string) {
   try {

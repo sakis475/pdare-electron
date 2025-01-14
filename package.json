@@ -1,12 +1,12 @@
 {
   "name": "electron-ts-app",
   "version": "1.0.0",
-  "main": "dist/main/main.js",
+  "main": "dist/src/main/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run build && electron .",
+    "build": "tsc && webpack --config webpack.config.js",
     "dev": "npm run build && concurrently \"npm run watch:electron\" \"npm run watch:webpack\" \"npm run start:dev\"",
     "start:dev": "wait-on dist/main/main.js && electron .",
-    "build": "npm run build:electron && npm run build:webpack",
     "build:electron": "tsc",
     "build:webpack": "webpack --config webpack.config.js",
     "watch:electron": "tsc -w",

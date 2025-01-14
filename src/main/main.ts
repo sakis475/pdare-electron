@@ -1,46 +1,8 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow } from "electron";
 import * as path from "path";
-import { BASE_DOMAIN } from "../../env";
 
-interface SocketStatus {
-  initialized: boolean;
-  connected: boolean;
-  error?: string;
-}
-
-async function initializeSocket(mainWindow: BrowserWindow) {
-  try {
-    const status: SocketStatus = {
-      initialized: true,
-      connected: true,
-    };
-    mainWindow.webContents.send("socket:status", status);
-
-    // Notify renderer that socket is initialized
-    mainWindow.webContents.send("socket:status", {
-      initialized: true,
-      connected: true,
-    });
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
-    console.error("Socket initialization error:", errorMessage);
-
-    const status: SocketStatus = {
-      initialized: false,
-      connected: false,
-      error: errorMessage,
-    };
-    mainWindow.webContents.send("socket:status", status);
-  }
-}
-
-ipcMain.on("auth:login-success", async (event) => {
-  const window = BrowserWindow.fromWebContents(event.sender);
-  if (window) {
-    await initializeSocket(window);
-  }
-});
+const userDataPath = app.getPath("userData");
+console.log("User Data Path", userDataPath);
 
 async function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -49,17 +11,18 @@ async function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, "../preload/preload.js"),
+      // Fix path to preload
+      preload: path.join(__dirname, "../../src/preload/preload.js"),
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+  // Fix path to index.html
+  mainWindow.loadFile(path.join(__dirname, "../../renderer/index.html"));
   mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
   createWindow();
-
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();

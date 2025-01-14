@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { getConnectionCode } from "../utils/requests";
+import { ConnectionBridge } from "../main/bridges/ConnectionBridge";
 
 interface LoginFormData {
   email: string;
@@ -10,6 +10,8 @@ interface LoginFormErrors {
   email?: string;
   password?: string;
 }
+
+const bridge = new ConnectionBridge();
 
 const LoginForm: React.FC = () => {
   const [formData, setFormData] = useState<LoginFormData>({
@@ -58,7 +60,7 @@ const LoginForm: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await getConnectionCode(
+      const response = await bridge.fetchAndStoreConnection(
         formData.email,
         formData.password
       );
