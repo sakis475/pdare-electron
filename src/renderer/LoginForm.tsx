@@ -11,9 +11,13 @@ interface LoginFormErrors {
   password?: string;
 }
 
+interface LoginFormProps {
+  onLoginSuccess: () => void;
+}
+
 const bridge = new ConnectionBridge();
 
-const LoginForm: React.FC = () => {
+const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
@@ -60,15 +64,9 @@ const LoginForm: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await bridge.fetchAndStoreConnection(
-        formData.email,
-        formData.password
-      );
-
-      console.log(response, "response");
-      // const connectionCode = await getStorage("connectionCode");
-      // Add your login logic here
       console.log("Logging in with:", formData);
+      await bridge.fetchAndStoreConnection(formData.email, formData.password);
+      onLoginSuccess();
     } catch (error) {
       console.error("Login error:", error);
     } finally {
