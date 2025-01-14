@@ -1,0 +1,37 @@
+{
+  "name": "electron-ts-app",
+  "version": "1.0.0",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "npm run build && concurrently \"npm run watch:electron\" \"npm run watch:webpack\" \"npm run start:dev\"",
+    "start:dev": "wait-on dist/main/main.js && electron .",
+    "build": "npm run build:electron && npm run build:webpack",
+    "build:electron": "tsc",
+    "build:webpack": "webpack --config webpack.config.js",
+    "watch:electron": "tsc -w",
+    "watch:webpack": "webpack --config webpack.config.js --watch"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dayjs": "^1.11.13",
+    "electron": "^29.0.0",
+    "electron-store": "8.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "socket.io-client": "^4.7.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "concurrently": "^8.2.2",
+    "css-loader": "^6.11.0",
+    "html-webpack-plugin": "^5.6.3",
+    "style-loader": "^3.3.4",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.0.0",
+    "wait-on": "^7.2.0",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^5.1.4"
+  }
+}
