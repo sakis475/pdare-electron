@@ -1,10 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
-import { socketManager } from "../Sockets/SocketManager";
 import { BASE_DOMAIN } from "../../env";
-import { socketEventSubscriber } from "../Sockets/SocketEventSubscriber";
-import { setupStorageHandlers } from "../storage/mainStorage";
-import { mainGetStorage } from "../storage/mainStore";
 
 interface SocketStatus {
   initialized: boolean;
@@ -14,10 +10,6 @@ interface SocketStatus {
 
 async function initializeSocket(mainWindow: BrowserWindow) {
   try {
-    await socketManager.updateUserInstance();
-    socketManager.connect(BASE_DOMAIN);
-    socketEventSubscriber.initialize();
-
     const status: SocketStatus = {
       initialized: true,
       connected: true,
@@ -63,19 +55,9 @@ async function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   mainWindow.webContents.openDevTools();
-
-  try {
-    const user = mainGetStorage("currentUser");
-    if (user && mainWindow) {
-      await initializeSocket(mainWindow);
-    }
-  } catch (error) {
-    console.error("Error checking user authentication:", error);
-  }
 }
 
 app.whenReady().then(() => {
-  setupStorageHandlers();
   createWindow();
 
   app.on("activate", () => {
@@ -86,7 +68,6 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  socketManager.disconnect();
   if (process.platform !== "darwin") {
     app.quit();
   }

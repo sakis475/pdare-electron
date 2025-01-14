@@ -1,13 +1,10 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 
-import { getStorage, setStorage } from "../storage/store";
 import { BASE_DOMAIN, BASE_URL } from "../../env";
-import { socketManager } from "../Sockets/SocketManager";
-import { socketEventSubscriber } from "../Sockets/SocketEventSubscriber";
 
 export async function getRequest(url: string) {
   try {
-    const connectionCode = await getStorage("connectionCode");
+    const connectionCode = null;
     if (!connectionCode) {
       return;
     }
@@ -31,12 +28,7 @@ export async function getConnectionCode(email: string, password: string) {
   console.log("POST " + BASE_URL + url);
   const response = await axios.post(BASE_URL + url, { email, password });
   console.log(response.data);
-  // await setStorage("connectionCode", response.data.connectionCode);
-  // await setStorage("currentUser", response.data.user);
 
-  await socketManager.updateUserInstance();
-  socketManager.connect(BASE_DOMAIN);
-  socketEventSubscriber.initialize();
   return response.data;
 }
 
