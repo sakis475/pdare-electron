@@ -7,7 +7,6 @@ const bridge = new ConnectionBridge();
 
 const App: React.FC = () => {
   const [socketInitialized, setSocketInitialized] = useState<boolean>(false);
-  const [socketError, setSocketError] = useState<string | undefined>(undefined);
   const [hasStoredConnection, setHasStoredConnection] =
     useState<boolean>(false);
   const [lastPrintOrder, setLastPrintOrder] = useState<string>("");
@@ -18,41 +17,40 @@ const App: React.FC = () => {
 
   const checkConnectionStatus = () => {
     const storedConnection = bridge.getStoredConnection();
-    console.log("[App Debug] Checking connection status:", storedConnection);
+    // console.log("[App Debug] Checking connection status:", storedConnection);
     const hasConnection = !!storedConnection;
     setHasStoredConnection(hasConnection);
-
-    if (hasConnection) {
-      socketService.reconnect();
-    }
+    // if (hasConnection) {
+    //   socketService.reconnect();
+    // }
   };
-
-  useEffect(() => {
-    if (hasStoredConnection) {
-      const storedConnection = bridge.getStoredConnection();
-      const restaurantId = storedConnection?.data?.user?.restaurant?.id;
-      if (restaurantId) {
-        console.log("[App Debug] Joining restaurant room:", restaurantId);
-        // Add small delay to ensure socket is initialized
-        setTimeout(() => {
-          socketService.joinRestaurantRoom(restaurantId);
-
-          socketService.onPrintOrder(restaurantId, (data) => {
-            console.log("[App Debug] Print order received:", data);
-            setLastPrintOrder(
-              `New print order received at ${new Date(
-                data.timestamp
-              ).toLocaleString()}`
-            );
-          });
-        }, 1000);
-      }
-    }
-  }, [hasStoredConnection]);
 
   const handleLoginSuccess = () => {
     console.log("Login success called");
     checkConnectionStatus();
+
+    const storedConnection = bridge.getStoredConnection();
+    const restaurantId = storedConnection?.data?.user?.restaurant?.id;
+    if (restaurantId) {
+      console.log("[App Debug] Joining restaurant room:", restaurantId);
+      // Add small delay to ensure socket is initialized
+
+      socketService.reconnect();
+      setTimeout(() => {
+        socketService.joinRestaurantRoom(restaurantId);
+
+        socketService.onPrintOrder(restaurantId, (data) => {
+          setLastPrintOrder(
+            `New print order received at ${new Date(
+              data.timestamp
+            ).toLocaleString()}`
+          );
+        });
+        socketService.onHealthCheck(restaurantId, (data) => {
+          console.log("HEALTH CHECK APP.tsx RECEIVED");
+        });
+      }, 1000);
+    }
   };
 
   const handleLogout = () => {

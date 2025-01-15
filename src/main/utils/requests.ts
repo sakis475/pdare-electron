@@ -2,24 +2,25 @@ import axios, { AxiosError, AxiosRequestConfig } from "axios";
 
 import { BASE_DOMAIN, BASE_URL } from "../../../env";
 
-export async function getRequest(url: string) {
+export async function getHealthCheck(connectionCode?: string) {
+  const url = BASE_URL + "/health-check-printer";
+  if (!connectionCode) {
+    throw new Error("No connection code available for request");
+  }
+
   try {
-    const connectionCode = null;
-    if (!connectionCode) {
-      return;
-    }
     const options = {
       headers: {
-        Authorization: `Bearer ${connectionCode}`,
+        Authorization: `${connectionCode}`,
       },
     };
 
-    console.log("GET " + BASE_URL + url);
-    const response = await axios.get(BASE_URL + url, options);
+    console.log("GET " + url);
+    const response = await axios.get(url, options);
     return response.data;
   } catch (error) {
-    // handleAxiosError(error as AxiosError);
-    console.log(error);
+    console.error("Request failed:", error);
+    throw error; // Re-throw the error to be caught by the caller
   }
 }
 

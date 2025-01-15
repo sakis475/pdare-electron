@@ -3,7 +3,8 @@ import {
   ConnectionBridge,
   StoredConnectionData,
 } from "../../main/bridges/ConnectionBridge";
-import { BASE_DOMAIN } from "../../../env";
+import { BASE_DOMAIN, BASE_URL } from "../../../env";
+import { getHealthCheck } from "./requests";
 
 const bridge = new ConnectionBridge();
 
@@ -16,11 +17,18 @@ class SocketService {
   private socket: Socket | null = null;
   private debugMode = true;
   private isConnecting: boolean = false;
-  private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
   private connectionData: StoredConnectionData | undefined;
+
+  private periodicReconnectTimer: NodeJS.Timeout | null = null;
+  private periodicReconnectInterval: number = 1 * 5 * 1000;
+
+  private isReconnecting: boolean = false;
+
+  private healthCheckTimeout: NodeJS.Timeout | null = null;
+
   constructor() {
     this.initializeSocket();
+    this.startPeriodicReconnectCheck();
   }
 
   private debugLog(...args: any[]) {
@@ -45,8 +53,7 @@ class SocketService {
       }
 
       this.debugLog("Initializing socket connection...");
-      this.debugLog("Connection data:", this.connectionData.data);
-
+      console.log(this.connectionData, "this.connectionData");
       this.socket = io(BASE_DOMAIN, {
         forceNew: true,
         // transports: ["websocket", "polling"],
@@ -55,7 +62,7 @@ class SocketService {
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
         auth: {
-          token: this.connectionData.data.token,
+          token: this.connectionData.data.connectionCode,
         },
       });
 
@@ -125,8 +132,29 @@ class SocketService {
 
     const printOrderEvent = `printOrder:${restaurantId}`;
     this.debugLog("Setting up print order listener for:", printOrderEvent);
+
+    this.socket.off(printOrderEvent);
+
     this.socket.on(printOrderEvent, (data: PrintOrderData) => {
       this.debugLog("Received print order:", data);
+      callback(data);
+    });
+  }
+
+  public onHealthCheck(
+    restaurantId: string,
+    callback: (data: PrintOrderData) => void
+  ) {
+    if (!this.socket) return;
+
+    const healthCheckEvent = `healthCheck:${restaurantId}`;
+
+    // Remove any existing listeners first
+    this.socket.off(healthCheckEvent);
+
+    // Add new listener
+    this.socket.on(healthCheckEvent, (data: PrintOrderData) => {
+      this.debugLog("Received Health Check:", data);
       callback(data);
     });
   }
@@ -162,16 +190,124 @@ class SocketService {
     }
   }
 
-  public reconnect() {
+  public async reconnect(): Promise<void> {
     if (this.socket?.connected) {
       this.debugLog("Already connected, skipping reconnect");
       return;
     }
+
     this.debugLog("Reconnecting socket");
     this.disconnect();
-    setTimeout(() => {
-      this.initializeSocket();
-    }, 500);
+
+    // Return a promise that resolves after initialization
+    return new Promise<void>((resolve) => {
+      setTimeout(async () => {
+        try {
+          await this.initializeSocket();
+          resolve();
+        } catch (error) {
+          this.debugLog("Reconnection failed:", error);
+          resolve(); // Resolve anyway to ensure finally block executes
+        }
+      }, 500);
+    });
+  }
+
+  private handleReconnection() {
+    if (this.isReconnecting) return;
+
+    this.isReconnecting = true;
+    this.debugLog("Starting reconnection process");
+
+    // Clear any existing health check timeout
+    if (this.healthCheckTimeout) {
+      clearTimeout(this.healthCheckTimeout);
+      this.healthCheckTimeout = null;
+    }
+
+    this.reconnect().finally(() => {
+      this.isReconnecting = false;
+    });
+  }
+
+  //--PERIODIC HEALTH CHECK!
+
+  private startPeriodicReconnectCheck(): void {
+    if (this.periodicReconnectTimer) {
+      clearInterval(this.periodicReconnectTimer);
+    }
+
+    this.periodicReconnectTimer = setInterval(async () => {
+      const isConnected = this.getConnectionStatus();
+
+      if (!isConnected) {
+        console.log("Socket disconnected, triggering reconnection...");
+        this.handleReconnection();
+      } else {
+        await this.performHealthCheck();
+      }
+    }, this.periodicReconnectInterval);
+
+    console.log(
+      `Periodic health check started - interval: ${this.periodicReconnectInterval}ms`
+    );
+  }
+  private async performHealthCheck(): Promise<void> {
+    if (!this.socket || !this.connectionData) return;
+
+    return new Promise<void>((resolve) => {
+      let healthCheckReceived = false;
+
+      // Setup socket event listener before making HTTP request
+      const healthCheckEvent = `healthCheck:${this.connectionData?.data.user.restaurant.id}`;
+
+      const handleSocketHealthCheck = (data: PrintOrderData) => {
+        this.debugLog("Received Health Check Socket Event:", data);
+        healthCheckReceived = true;
+        if (this.healthCheckTimeout) {
+          clearTimeout(this.healthCheckTimeout);
+          this.healthCheckTimeout = null;
+        }
+        this.socket?.off(healthCheckEvent, handleSocketHealthCheck); // Remove listener
+        resolve();
+      };
+
+      // Add socket event listener
+      this.socket!.on(healthCheckEvent, handleSocketHealthCheck);
+
+      // Set timeout for health check
+      this.healthCheckTimeout = setTimeout(() => {
+        if (!healthCheckReceived && !this.isReconnecting) {
+          this.debugLog("Health check timeout - triggering reconnection");
+          this.socket?.off(healthCheckEvent, handleSocketHealthCheck); // Remove listener
+          this.handleReconnection();
+        }
+        resolve();
+      }, 5000);
+
+      // Make HTTP request
+      getHealthCheck(this.connectionData?.data.connectionCode).catch(
+        (error: any) => {
+          this.debugLog("Health check HTTP request failed:", error);
+          if (this.healthCheckTimeout) {
+            clearTimeout(this.healthCheckTimeout);
+            this.healthCheckTimeout = null;
+          }
+          this.socket?.off(healthCheckEvent, handleSocketHealthCheck); // Remove listener
+          if (!this.isReconnecting) {
+            this.handleReconnection();
+          }
+          resolve();
+        }
+      );
+    });
+  }
+
+  private stopPeriodicReconnectCheck(): void {
+    if (this.periodicReconnectTimer) {
+      clearInterval(this.periodicReconnectTimer);
+      this.periodicReconnectTimer = null;
+    }
   }
 }
 
