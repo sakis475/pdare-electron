@@ -12,7 +12,7 @@ interface ConnectionResponse {
   [key: string]: any;
 }
 
-interface StoredConnectionData {
+export interface StoredConnectionData {
   data: ConnectionResponse;
   timestamp: number;
 }

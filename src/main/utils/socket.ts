@@ -1,5 +1,8 @@
 import { io, Socket } from "socket.io-client";
-import { ConnectionBridge } from "../../main/bridges/ConnectionBridge";
+import {
+  ConnectionBridge,
+  StoredConnectionData,
+} from "../../main/bridges/ConnectionBridge";
 import { BASE_DOMAIN } from "../../../env";
 
 const bridge = new ConnectionBridge();
@@ -15,11 +18,9 @@ class SocketService {
   private isConnecting: boolean = false;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
-  private pendingRoomJoins: Set<string> = new Set();
-
+  private connectionData: StoredConnectionData | undefined;
   constructor() {
-    // this.debugLog("Initializing SocketService");
-    // this.initializeSocket();
+    this.initializeSocket();
   }
 
   private debugLog(...args: any[]) {
@@ -36,15 +37,15 @@ class SocketService {
 
     try {
       this.isConnecting = true;
-      const connectionData = bridge.getStoredConnection();
+      this.connectionData = bridge.getStoredConnection();
 
-      if (!connectionData?.data?.connectionCode) {
+      if (!this.connectionData?.data?.connectionCode) {
         this.debugLog("No connection code available");
         return;
       }
 
       this.debugLog("Initializing socket connection...");
-      this.debugLog("Connection data:", connectionData.data);
+      this.debugLog("Connection data:", this.connectionData.data);
 
       this.socket = io(BASE_DOMAIN, {
         forceNew: true,
@@ -54,7 +55,7 @@ class SocketService {
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
         auth: {
-          token: connectionData.data.token,
+          token: this.connectionData.data.token,
         },
       });
 
@@ -71,13 +72,7 @@ class SocketService {
 
     this.socket.on("connect", () => {
       this.debugLog("Socket connected successfully");
-
-      // Join any pending rooms
-      this.pendingRoomJoins.forEach((roomId) => {
-        this.debugLog("Joining pending room:", roomId);
-        this.joinRestaurantRoom(roomId);
-      });
-      this.pendingRoomJoins.clear();
+      this.joinRestaurantRoom(this.connectionData?.data.user.restaurant.id);
     });
 
     this.socket.on("connect_error", (error) => {
@@ -103,7 +98,6 @@ class SocketService {
 
     if (!this.socket?.connected) {
       this.debugLog("Socket not connected, queueing room join");
-      this.pendingRoomJoins.add(restaurantId);
       return;
     }
 
@@ -165,7 +159,6 @@ class SocketService {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
-      this.pendingRoomJoins.clear();
     }
   }
 
