@@ -10,6 +10,7 @@ const App: React.FC = () => {
   const [socketError, setSocketError] = useState<string | undefined>(undefined);
   const [hasStoredConnection, setHasStoredConnection] =
     useState<boolean>(false);
+  const [lastPrintOrder, setLastPrintOrder] = useState<string>("");
 
   useEffect(() => {
     checkConnectionStatus();
@@ -17,7 +18,7 @@ const App: React.FC = () => {
 
   const checkConnectionStatus = () => {
     const storedConnection = bridge.getStoredConnection();
-    console.log("Checking connection status:", storedConnection);
+    console.log("[App Debug] Checking connection status:", storedConnection);
     const hasConnection = !!storedConnection;
     setHasStoredConnection(hasConnection);
 
@@ -25,6 +26,29 @@ const App: React.FC = () => {
       socketService.reconnect();
     }
   };
+
+  useEffect(() => {
+    if (hasStoredConnection) {
+      const storedConnection = bridge.getStoredConnection();
+      const restaurantId = storedConnection?.data?.user?.restaurant?.id;
+      if (restaurantId) {
+        console.log("[App Debug] Joining restaurant room:", restaurantId);
+        // Add small delay to ensure socket is initialized
+        setTimeout(() => {
+          socketService.joinRestaurantRoom(restaurantId);
+
+          socketService.onPrintOrder(restaurantId, (data) => {
+            console.log("[App Debug] Print order received:", data);
+            setLastPrintOrder(
+              `New print order received at ${new Date(
+                data.timestamp
+              ).toLocaleString()}`
+            );
+          });
+        }, 1000);
+      }
+    }
+  }, [hasStoredConnection]);
 
   const handleLoginSuccess = () => {
     console.log("Login success called");
@@ -137,6 +161,21 @@ const App: React.FC = () => {
               Connection Established
             </h2>
             <p>You are connected to the service.</p>
+
+            {lastPrintOrder && (
+              <div
+                style={{
+                  marginTop: "20px",
+                  padding: "10px",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                }}
+              >
+                {lastPrintOrder}
+              </div>
+            )}
+
             <button
               onClick={handleSendHello}
               style={{

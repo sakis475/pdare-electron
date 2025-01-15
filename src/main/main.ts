@@ -14,24 +14,27 @@ async function createWindow() {
       contextIsolation: true,
       // Fix path to preload
       preload: path.join(__dirname, "../../src/preload/preload.js"),
+      webSecurity: true,
     },
   });
 
   // Configure CSP headers
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        "Content-Security-Policy": [
-          "default-src 'self';" +
-            "connect-src 'self' http://localhost:8000 ws://localhost:8000 wss://localhost:8000 http://localhost:* ws://localhost:* wss://localhost:*;" +
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval';" +
-            "style-src 'self' 'unsafe-inline';" +
-            "img-src 'self' data: http://localhost:*",
-        ],
-      },
-    });
-  });
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [
+            "default-src 'self';" +
+              "script-src 'self';" +
+              // Add both WS and HTTP endpoints
+              "connect-src 'self' ws://localhost:8000 http://localhost:8000 wss://localhost:8000;" +
+              "style-src 'self' 'unsafe-inline';",
+          ],
+        },
+      });
+    }
+  );
 
   // Enable remote debugging in development
   if (NODE_ENV === "development") {
