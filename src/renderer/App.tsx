@@ -134,9 +134,9 @@ const App: React.FC = () => {
             }}
           >
             <h2 style={{ color: "#4CAF50", marginBottom: "20px" }}>
-              Connection Established2
+              Connection Established
             </h2>
-            <p>You are connected to the service2.</p>
+            <p>You are connected to the service.</p>
             <button
               onClick={handleSendHello}
               style={{

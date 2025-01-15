@@ -6,6 +6,7 @@
     "clean": "rimraf dist",
     "start": "electron .",
     "build": "npm run clean && tsc && webpack --config webpack.config.js",
+    "start:prod": "npm run clean && npm run build && npm run start",
     "dev": "concurrently \"npm run watch:electron\" \"npm run watch:webpack\" \"npm run start:electron-dev\"",
     "watch:electron": "tsc -w",
     "watch:webpack": "webpack --config webpack.config.js --watch",
