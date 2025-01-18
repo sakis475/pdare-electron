@@ -6,8 +6,10 @@ import {
 import { BASE_DOMAIN, BASE_URL } from "../../../env";
 import { getHealthCheck, postPrinterAppDiscovered } from "./requests";
 import { findPrinters } from "../../main/printers/PrinterScan/printersUtil";
-// import OrderPrinterAdapter from "../../main/printers/Print/Print";
-// import { CharacterSet, PrinterTypes } from "node-thermal-printer";
+
+import OrderPrinterAdapter from "../../main/printers/Print/Print";
+import { CharacterSet, PrinterTypes } from "node-thermal-printer";
+import { ipcMain } from "electron";
 
 const bridge = new ConnectionBridge();
 
@@ -50,7 +52,33 @@ class SocketService {
 
     try {
       this.isConnecting = true;
-      this.connectionData = bridge.getStoredConnection();
+      this.connectionData = JSON.parse(
+        `
+        {"data":{
+    "connectionCode": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MjQxODI1LCJleHAiOjIzNjgzOTM4MjV9.AshaCPGGzS4VScyU_3JB_qvWN3Gg4B2EhG6rxEm39Ug",
+    "user": {
+        "id": 2,
+        "username": "username",
+        "email": "u@gmail.com",
+        "firstName": "firstName",
+        "lastName": "lastNam",
+        "role": "owner",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXJuYW1lIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MDU5OTc1LCJleHAiOjE3Mzc2NjQ3NzV9.GX_OE5eqmYaL9n7hFlTykWogvcE-QRjWh5rRZDV9kXU",
+        "active": true,
+        "displayName": "OwnerUser",
+        "restaurant": {
+            "id": 1,
+            "restaurantName": "Το Σουβλάκι του Σάκη",
+            "restaurantDisplayName": "Το Σουβλάκι του Σάκη",
+            "couvertCost": "0.00",
+            "currencySymbol": "$",
+            "active": true,
+            "printerAppConnectionCode": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MjQxODI1LCJleHAiOjIzNjgzOTM4MjV9.AshaCPGGzS4VScyU_3JB_qvWN3Gg4B2EhG6rxEm39Ug",
+            "updatedAt": "2025-01-18T23:10:25.543Z"
+        }
+    }
+      }}`
+      ); //bridge.getStoredConnection();
 
       if (!this.connectionData?.data?.connectionCode) {
         this.debugLog("No connection code available");
@@ -225,18 +253,18 @@ class SocketService {
     const printOrderEvent = `printOrder:${this.connectionData?.data.user.restaurant.id}`;
     this.socket?.off(printOrderEvent, () => {});
     this.socket!.on(printOrderEvent, async (order: OrderIO) => {
-      //   const printer = new OrderPrinterAdapter({
-      //     printerIP: "192.168.1.7",
-      //     printerType: PrinterTypes.EPSON,
-      //     characterSet: CharacterSet.PC737_GREEK,
-      //   });
+      const printer = new OrderPrinterAdapter({
+        printerIP: "192.168.1.7",
+        printerType: PrinterTypes.EPSON,
+        characterSet: CharacterSet.PC737_GREEK,
+      });
 
-      //   const success = await printer.printOrder(order);
-      //   if (success) {
-      //     console.log("Order printed successfully");
-      //   } else {
-      //     console.log("Failed to print order");
-      //   }
+      const success = await printer.printOrder(order);
+      if (success) {
+        console.log("Order printed successfully");
+      } else {
+        console.log("Failed to print order");
+      }
       console.log("[Main] Receive Order To Print", order);
     });
   }
@@ -299,5 +327,16 @@ class SocketService {
     }
   }
 }
+
+export const setupSocketBridge = () => {
+  ipcMain.handle("reconnect-socket", (event) => {
+    socketService.reconnect();
+  });
+};
+export const disconnectSocket = () => {
+  ipcMain.handle("disconnect-socket", (event) => {
+    socketService.disconnect();
+  });
+};
 
 export const socketService = new SocketService();
