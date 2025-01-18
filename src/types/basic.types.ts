@@ -2,7 +2,7 @@ interface ItemProperty {
   id?: number;
   propertyName: string;
   propertyValue: string;
-  propertyType: 'multiselect' | 'singleselect';
+  propertyType: "multiselect" | "singleselect";
   isEnabled?: boolean;
   orderGroup: number | null;
   orderItem: number | null;
@@ -138,7 +138,7 @@ interface User {
   firstName: string;
   lastName: string;
   displayName?: string;
-  role: 'owner' | 'waiter' | 'guest';
+  role: "owner" | "waiter" | "guest";
   restaurant?: Restaurant;
   invitations?: InvitationRequest[];
   markForDelete?: boolean;
@@ -159,7 +159,7 @@ interface InvitationRequest {
 }
 
 enum InvitationRequestStatus {
-  ACCEPTED = 'accepted',
-  CANCELLED = 'cancelled',
-  AWAITING = 'awaiting',
+  ACCEPTED = "accepted",
+  CANCELLED = "cancelled",
+  AWAITING = "awaiting",
 }

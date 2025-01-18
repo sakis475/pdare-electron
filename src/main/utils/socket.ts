@@ -4,7 +4,10 @@ import {
   StoredConnectionData,
 } from "../../main/bridges/ConnectionBridge";
 import { BASE_DOMAIN, BASE_URL } from "../../../env";
-import { getHealthCheck } from "./requests";
+import { getHealthCheck, postPrinterAppDiscovered } from "./requests";
+import { findPrinters } from "../../main/printers/PrinterScan/printersUtil";
+// import OrderPrinterAdapter from "../../main/printers/Print/Print";
+// import { CharacterSet, PrinterTypes } from "node-thermal-printer";
 
 const bridge = new ConnectionBridge();
 
@@ -20,7 +23,7 @@ class SocketService {
   private connectionData: StoredConnectionData | undefined;
 
   private periodicReconnectTimer: NodeJS.Timeout | null = null;
-  private periodicReconnectInterval: number = 1 * 5 * 1000;
+  private periodicReconnectInterval: number = 1 * 15 * 1000;
 
   private isReconnecting: boolean = false;
 
@@ -29,6 +32,8 @@ class SocketService {
   constructor() {
     this.initializeSocket();
     this.startPeriodicReconnectCheck();
+    this.subscribePrintOrderSocket();
+    this.subscribeRequestPrinterScan();
   }
 
   private debugLog(...args: any[]) {
@@ -37,7 +42,7 @@ class SocketService {
     }
   }
 
-  private async initializeSocket() {
+  private initializeSocket() {
     if (this.isConnecting) {
       this.debugLog("Already connecting, skipping...");
       return;
@@ -124,62 +129,8 @@ class SocketService {
     });
   }
 
-  public onPrintOrder(
-    restaurantId: string,
-    callback: (data: PrintOrderData) => void
-  ) {
-    if (!this.socket) return;
-
-    const printOrderEvent = `printOrder:${restaurantId}`;
-    this.debugLog("Setting up print order listener for:", printOrderEvent);
-
-    this.socket.off(printOrderEvent);
-
-    this.socket.on(printOrderEvent, (data: PrintOrderData) => {
-      this.debugLog("Received print order:", data);
-      callback(data);
-    });
-  }
-
-  public onHealthCheck(
-    restaurantId: string,
-    callback: (data: PrintOrderData) => void
-  ) {
-    if (!this.socket) return;
-
-    const healthCheckEvent = `healthCheck:${restaurantId}`;
-
-    // Remove any existing listeners first
-    this.socket.off(healthCheckEvent);
-
-    // Add new listener
-    this.socket.on(healthCheckEvent, (data: PrintOrderData) => {
-      this.debugLog("Received Health Check:", data);
-      callback(data);
-    });
-  }
-
   public getConnectionStatus(): boolean {
     return this.socket?.connected || false;
-  }
-
-  public sendHello() {
-    this.debugLog("Attempting to send hello message");
-    this.debugLog("Current connection status:", this.getConnectionStatus());
-
-    if (!this.socket?.connected) {
-      this.debugLog("Cannot send message - socket not connected");
-      return;
-    }
-
-    this.debugLog("Sending hello message");
-    this.socket.emit(
-      "client:hello",
-      "Hello World from Client!",
-      (response: any) => {
-        this.debugLog("Hello message response:", response);
-      }
-    );
   }
 
   public disconnect() {
@@ -203,7 +154,9 @@ class SocketService {
     return new Promise<void>((resolve) => {
       setTimeout(async () => {
         try {
-          await this.initializeSocket();
+          this.initializeSocket();
+          this.subscribePrintOrderSocket();
+          this.subscribeRequestPrinterScan();
           resolve();
         } catch (error) {
           this.debugLog("Reconnection failed:", error);
@@ -240,7 +193,7 @@ class SocketService {
     this.periodicReconnectTimer = setInterval(async () => {
       const isConnected = this.getConnectionStatus();
 
-      if (!isConnected) {
+      if (!isConnected && !this.isConnecting) {
         console.log("Socket disconnected, triggering reconnection...");
         this.handleReconnection();
       } else {
@@ -252,6 +205,42 @@ class SocketService {
       `Periodic health check started - interval: ${this.periodicReconnectInterval}ms`
     );
   }
+
+  private async subscribeRequestPrinterScan(): Promise<void> {
+    if (!this.socket || !this.connectionData) return;
+    const printerDiscoveredEvent = `requestPrinterScan:${this.connectionData?.data.user.restaurant.id}`;
+    this.socket?.off(printerDiscoveredEvent, () => {});
+    this.socket!.on(printerDiscoveredEvent, async () => {
+      const printers = await findPrinters();
+      const printersArr = printers ? Object.values(printers) : [];
+      await postPrinterAppDiscovered(
+        printersArr,
+        this.connectionData?.data.connectionCode
+      );
+    });
+  }
+
+  private async subscribePrintOrderSocket(): Promise<void> {
+    if (!this.socket || !this.connectionData) return;
+    const printOrderEvent = `printOrder:${this.connectionData?.data.user.restaurant.id}`;
+    this.socket?.off(printOrderEvent, () => {});
+    this.socket!.on(printOrderEvent, async (order: OrderIO) => {
+      //   const printer = new OrderPrinterAdapter({
+      //     printerIP: "192.168.1.7",
+      //     printerType: PrinterTypes.EPSON,
+      //     characterSet: CharacterSet.PC737_GREEK,
+      //   });
+
+      //   const success = await printer.printOrder(order);
+      //   if (success) {
+      //     console.log("Order printed successfully");
+      //   } else {
+      //     console.log("Failed to print order");
+      //   }
+      console.log("[Main] Receive Order To Print", order);
+    });
+  }
+
   private async performHealthCheck(): Promise<void> {
     if (!this.socket || !this.connectionData) return;
 
@@ -268,7 +257,7 @@ class SocketService {
           clearTimeout(this.healthCheckTimeout);
           this.healthCheckTimeout = null;
         }
-        this.socket?.off(healthCheckEvent, handleSocketHealthCheck); // Remove listener
+        this.socket?.off(healthCheckEvent, handleSocketHealthCheck);
         resolve();
       };
 
@@ -279,7 +268,7 @@ class SocketService {
       this.healthCheckTimeout = setTimeout(() => {
         if (!healthCheckReceived && !this.isReconnecting) {
           this.debugLog("Health check timeout - triggering reconnection");
-          this.socket?.off(healthCheckEvent, handleSocketHealthCheck); // Remove listener
+          this.socket?.off(healthCheckEvent, handleSocketHealthCheck);
           this.handleReconnection();
         }
         resolve();
@@ -293,7 +282,7 @@ class SocketService {
             clearTimeout(this.healthCheckTimeout);
             this.healthCheckTimeout = null;
           }
-          this.socket?.off(healthCheckEvent, handleSocketHealthCheck); // Remove listener
+          this.socket?.off(healthCheckEvent, handleSocketHealthCheck);
           if (!this.isReconnecting) {
             this.handleReconnection();
           }

@@ -9,7 +9,6 @@ const App: React.FC = () => {
   const [socketInitialized, setSocketInitialized] = useState<boolean>(false);
   const [hasStoredConnection, setHasStoredConnection] =
     useState<boolean>(false);
-  const [lastPrintOrder, setLastPrintOrder] = useState<string>("");
 
   useEffect(() => {
     checkConnectionStatus();
@@ -33,23 +32,8 @@ const App: React.FC = () => {
     const restaurantId = storedConnection?.data?.user?.restaurant?.id;
     if (restaurantId) {
       console.log("[App Debug] Joining restaurant room:", restaurantId);
-      // Add small delay to ensure socket is initialized
 
       socketService.reconnect();
-      setTimeout(() => {
-        socketService.joinRestaurantRoom(restaurantId);
-
-        socketService.onPrintOrder(restaurantId, (data) => {
-          setLastPrintOrder(
-            `New print order received at ${new Date(
-              data.timestamp
-            ).toLocaleString()}`
-          );
-        });
-        socketService.onHealthCheck(restaurantId, (data) => {
-          console.log("HEALTH CHECK APP.tsx RECEIVED");
-        });
-      }, 1000);
     }
   };
 
@@ -58,10 +42,6 @@ const App: React.FC = () => {
     socketService.disconnect();
     bridge.clearConnection();
     checkConnectionStatus();
-  };
-
-  const handleSendHello = () => {
-    socketService.sendHello();
   };
 
   return (
@@ -97,22 +77,6 @@ const App: React.FC = () => {
             )}
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            {hasStoredConnection && (
-              <button
-                onClick={handleSendHello}
-                style={{
-                  backgroundColor: "#4CAF50",
-                  color: "white",
-                  border: "none",
-                  padding: "5px 10px",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                }}
-              >
-                Send Hello
-              </button>
-            )}
             {hasStoredConnection && (
               <button
                 onClick={handleLogout}
@@ -159,37 +123,6 @@ const App: React.FC = () => {
               Connection Established
             </h2>
             <p>You are connected to the service.</p>
-
-            {lastPrintOrder && (
-              <div
-                style={{
-                  marginTop: "20px",
-                  padding: "10px",
-                  backgroundColor: "#f8f9fa",
-                  borderRadius: "4px",
-                  fontSize: "14px",
-                }}
-              >
-                {lastPrintOrder}
-              </div>
-            )}
-
-            <button
-              onClick={handleSendHello}
-              style={{
-                backgroundColor: "#4CAF50",
-                color: "white",
-                border: "none",
-                padding: "10px 20px",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "16px",
-                marginTop: "20px",
-                width: "100%",
-              }}
-            >
-              Send Hello Message
-            </button>
           </div>
         )}
       </div>

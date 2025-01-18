@@ -1,17 +1,19 @@
-import { app, BrowserWindow, session } from "electron";
+import { app, BrowserWindow, session, powerSaveBlocker } from "electron";
 import * as path from "path";
 import { NODE_ENV } from "../../env";
 
 const userDataPath = app.getPath("userData");
 console.log("User Data Path", userDataPath);
 
+const id = powerSaveBlocker.start("prevent-display-sleep");
+
 async function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
+      nodeIntegration: true,
+      contextIsolation: false,
       // Fix path to preload
       preload: path.join(__dirname, "../../src/preload/preload.js"),
       webSecurity: true,
@@ -55,6 +57,7 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
+    powerSaveBlocker.stop(id);
     app.quit();
   }
 });

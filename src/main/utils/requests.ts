@@ -1,8 +1,9 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 
 import { BASE_DOMAIN, BASE_URL } from "../../../env";
+import { Printer } from "../../main/printers/PrinterScan/SearchPrinters";
 
-export async function getHealthCheck(connectionCode?: string) {
+export async function getHealthCheck(connectionCode: string) {
   const url = BASE_URL + "/health-check-printer";
   if (!connectionCode) {
     throw new Error("No connection code available for request");
@@ -33,6 +34,23 @@ export async function getConnectionCode(email: string, password: string) {
   return response.data;
 }
 
+export async function postPrinterAppDiscovered(
+  printers: Printer[],
+  connectionCode: string
+) {
+  const url = "/printerapp/discovered";
+  if (!connectionCode) {
+    throw new Error("No connection code available for request");
+  }
+
+  const options = {
+    headers: {
+      Authorization: `${connectionCode}`,
+    },
+  };
+  console.log("POST " + BASE_URL + url, printers);
+  const response = await axios.post(BASE_URL + url, { printers }, options);
+}
 // function handleAxiosError(error: any) {
 //   if (axios.isAxiosError(error)) {
 //     if (error?.response?.data?.appcode) {

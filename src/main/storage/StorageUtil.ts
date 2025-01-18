@@ -1,3 +1,9 @@
+export const STORAGE_KEYS = {
+  CONNECTION_DATA: "connection_data",
+  PRINTERS_DATA: "printer_data",
+  LAST_UPDATED: "connection_last_updated",
+} as const;
+
 class StorageUtil {
   public set<T>(key: string, value: T): void {
     try {

@@ -1,11 +1,7 @@
-import { storage } from "../storage/StorageUtil";
+import { storage, STORAGE_KEYS } from "../storage/StorageUtil";
 import { getConnectionCode } from "../utils/requests";
 
 // Constants for storage keys
-const STORAGE_KEYS = {
-  CONNECTION_DATA: "connection_data",
-  LAST_UPDATED: "connection_last_updated",
-} as const;
 
 interface ConnectionResponse {
   // Add specific response type properties here
