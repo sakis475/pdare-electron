@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ConnectionBridge } from "../main/bridges/ConnectionBridge";
+import { bridge } from "./bridges/bridge";
 
 interface LoginFormData {
   email: string;
@@ -14,8 +14,6 @@ interface LoginFormErrors {
 interface LoginFormProps {
   onLoginSuccess: () => void;
 }
-
-const bridge = new ConnectionBridge();
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState<LoginFormData>({

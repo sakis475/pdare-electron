@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import LoginForm from "./LoginForm";
 import { bridge } from "./bridges/bridge";
-import { ConnectionBridge } from "../main/bridges/ConnectionBridge";
+// import { ConnectionBridge } from "../main/bridges/ConnectionBridge";
 
-const storageBridge = new ConnectionBridge();
+// const storageBridge = new ConnectionBridge();
 
 const App: React.FC = () => {
   const [socketInitialized, setSocketInitialized] = useState<boolean>(false);
@@ -13,8 +13,8 @@ const App: React.FC = () => {
   useEffect(() => {
     checkConnectionStatus();
   }, []);
-  const checkConnectionStatus = () => {
-    const storedConnection = storageBridge.getStoredConnection();
+  const checkConnectionStatus = async () => {
+    const storedConnection = await bridge.getStoredConnection();
     // console.log("[App Debug] Checking connection status:", storedConnection);
     const hasConnection = !!storedConnection;
     setHasStoredConnection(hasConnection);
@@ -23,11 +23,11 @@ const App: React.FC = () => {
     // }
   };
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = async () => {
     console.log("Login success called");
     checkConnectionStatus();
 
-    const storedConnection = storageBridge.getStoredConnection();
+    const storedConnection = await bridge.getStoredConnection();
     const restaurantId = storedConnection?.data?.user?.restaurant?.id;
     if (restaurantId) {
       console.log("[App Debug] Joining restaurant room:", restaurantId);
@@ -35,10 +35,10 @@ const App: React.FC = () => {
     bridge.reconnectSocket();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log("Logging out...");
     bridge.disconnectSocket();
-    storageBridge.clearConnection();
+    await bridge.clearStoredConnection();
     checkConnectionStatus();
   };
 

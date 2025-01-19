@@ -1,3 +1,12 @@
+interface StoredConnectionData {
+  data: ConnectionResponse;
+  timestamp: number;
+}
+
+interface ConnectionResponse {
+  [key: string]: any;
+}
+
 interface ItemProperty {
   id?: number;
   propertyName: string;

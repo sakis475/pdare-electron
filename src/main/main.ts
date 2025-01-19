@@ -2,6 +2,11 @@ import { app, BrowserWindow, session, powerSaveBlocker } from "electron";
 import * as path from "path";
 import { NODE_ENV } from "../../env";
 import { disconnectSocket, setupSocketBridge } from "./utils/socket";
+import {
+  clearConnectionBridge,
+  fetchAndStoreConnectionBridge,
+  getStoredConnectionBridge,
+} from "./storage/StorageUtil";
 
 const userDataPath = app.getPath("userData");
 console.log("User Data Path", userDataPath);
@@ -50,6 +55,9 @@ async function createWindow() {
 app.whenReady().then(() => {
   setupSocketBridge();
   disconnectSocket();
+  fetchAndStoreConnectionBridge();
+  getStoredConnectionBridge();
+  clearConnectionBridge();
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

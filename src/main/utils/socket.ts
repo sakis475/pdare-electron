@@ -1,8 +1,4 @@
 import { io, Socket } from "socket.io-client";
-import {
-  ConnectionBridge,
-  StoredConnectionData,
-} from "../../main/bridges/ConnectionBridge";
 import { BASE_DOMAIN, BASE_URL } from "../../../env";
 import { getHealthCheck, postPrinterAppDiscovered } from "./requests";
 import { findPrinters } from "../../main/printers/PrinterScan/printersUtil";
@@ -11,7 +7,7 @@ import OrderPrinterAdapter from "../../main/printers/Print/Print";
 import { CharacterSet, PrinterTypes } from "node-thermal-printer";
 import { ipcMain } from "electron";
 
-const bridge = new ConnectionBridge();
+import { getStoredConnection, storage } from "../../main/storage/StorageUtil";
 
 interface PrintOrderData {
   timestamp: number;
@@ -44,7 +40,7 @@ class SocketService {
     }
   }
 
-  private initializeSocket() {
+  private async initializeSocket() {
     if (this.isConnecting) {
       this.debugLog("Already connecting, skipping...");
       return;
@@ -52,34 +48,36 @@ class SocketService {
 
     try {
       this.isConnecting = true;
-      this.connectionData = JSON.parse(
-        `
-        {"data":{
-    "connectionCode": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MjQxODI1LCJleHAiOjIzNjgzOTM4MjV9.AshaCPGGzS4VScyU_3JB_qvWN3Gg4B2EhG6rxEm39Ug",
-    "user": {
-        "id": 2,
-        "username": "username",
-        "email": "u@gmail.com",
-        "firstName": "firstName",
-        "lastName": "lastNam",
-        "role": "owner",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXJuYW1lIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MDU5OTc1LCJleHAiOjE3Mzc2NjQ3NzV9.GX_OE5eqmYaL9n7hFlTykWogvcE-QRjWh5rRZDV9kXU",
-        "active": true,
-        "displayName": "OwnerUser",
-        "restaurant": {
-            "id": 1,
-            "restaurantName": "Το Σουβλάκι του Σάκη",
-            "restaurantDisplayName": "Το Σουβλάκι του Σάκη",
-            "couvertCost": "0.00",
-            "currencySymbol": "$",
-            "active": true,
-            "printerAppConnectionCode": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MjQxODI1LCJleHAiOjIzNjgzOTM4MjV9.AshaCPGGzS4VScyU_3JB_qvWN3Gg4B2EhG6rxEm39Ug",
-            "updatedAt": "2025-01-18T23:10:25.543Z"
-        }
-    }
-      }}`
-      ); //bridge.getStoredConnection();
 
+      //   JSON.parse(
+      //     `
+      //     {"data":{
+      // "connectionCode": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MjQxODI1LCJleHAiOjIzNjgzOTM4MjV9.AshaCPGGzS4VScyU_3JB_qvWN3Gg4B2EhG6rxEm39Ug",
+      // "user": {
+      //     "id": 2,
+      //     "username": "username",
+      //     "email": "u@gmail.com",
+      //     "firstName": "firstName",
+      //     "lastName": "lastNam",
+      //     "role": "owner",
+      //     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXJuYW1lIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MDU5OTc1LCJleHAiOjE3Mzc2NjQ3NzV9.GX_OE5eqmYaL9n7hFlTykWogvcE-QRjWh5rRZDV9kXU",
+      //     "active": true,
+      //     "displayName": "OwnerUser",
+      //     "restaurant": {
+      //         "id": 1,
+      //         "restaurantName": "Το Σουβλάκι του Σάκη",
+      //         "restaurantDisplayName": "Το Σουβλάκι του Σάκη",
+      //         "couvertCost": "0.00",
+      //         "currencySymbol": "$",
+      //         "active": true,
+      //         "printerAppConnectionCode": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MjQxODI1LCJleHAiOjIzNjgzOTM4MjV9.AshaCPGGzS4VScyU_3JB_qvWN3Gg4B2EhG6rxEm39Ug",
+      //         "updatedAt": "2025-01-18T23:10:25.543Z"
+      //     }
+      // }
+      //   }}`
+      //   );
+      // this.connectionData = await bridge.getStoredConnection();
+      this.connectionData = await getStoredConnection();
       if (!this.connectionData?.data?.connectionCode) {
         this.debugLog("No connection code available");
         return;
