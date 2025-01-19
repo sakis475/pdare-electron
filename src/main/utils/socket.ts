@@ -7,7 +7,7 @@ import OrderPrinterAdapter from "../../main/printers/Print/Print";
 import { CharacterSet, PrinterTypes } from "node-thermal-printer";
 import { ipcMain } from "electron";
 
-import { getStoredConnection, storage } from "../../main/storage/StorageUtil";
+import { getStoredConnection } from "../../main/storage/StorageUtil";
 
 interface PrintOrderData {
   timestamp: number;
@@ -30,8 +30,6 @@ class SocketService {
   constructor() {
     this.initializeSocket();
     this.startPeriodicReconnectCheck();
-    this.subscribePrintOrderSocket();
-    this.subscribeRequestPrinterScan();
   }
 
   private debugLog(...args: any[]) {
@@ -48,35 +46,6 @@ class SocketService {
 
     try {
       this.isConnecting = true;
-
-      //   JSON.parse(
-      //     `
-      //     {"data":{
-      // "connectionCode": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MjQxODI1LCJleHAiOjIzNjgzOTM4MjV9.AshaCPGGzS4VScyU_3JB_qvWN3Gg4B2EhG6rxEm39Ug",
-      // "user": {
-      //     "id": 2,
-      //     "username": "username",
-      //     "email": "u@gmail.com",
-      //     "firstName": "firstName",
-      //     "lastName": "lastNam",
-      //     "role": "owner",
-      //     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXJuYW1lIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MDU5OTc1LCJleHAiOjE3Mzc2NjQ3NzV9.GX_OE5eqmYaL9n7hFlTykWogvcE-QRjWh5rRZDV9kXU",
-      //     "active": true,
-      //     "displayName": "OwnerUser",
-      //     "restaurant": {
-      //         "id": 1,
-      //         "restaurantName": "Το Σουβλάκι του Σάκη",
-      //         "restaurantDisplayName": "Το Σουβλάκι του Σάκη",
-      //         "couvertCost": "0.00",
-      //         "currencySymbol": "$",
-      //         "active": true,
-      //         "printerAppConnectionCode": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwiaWF0IjoxNzM3MjQxODI1LCJleHAiOjIzNjgzOTM4MjV9.AshaCPGGzS4VScyU_3JB_qvWN3Gg4B2EhG6rxEm39Ug",
-      //         "updatedAt": "2025-01-18T23:10:25.543Z"
-      //     }
-      // }
-      //   }}`
-      //   );
-      // this.connectionData = await bridge.getStoredConnection();
       this.connectionData = await getStoredConnection();
       if (!this.connectionData?.data?.connectionCode) {
         this.debugLog("No connection code available");
@@ -87,7 +56,6 @@ class SocketService {
       console.log(this.connectionData, "this.connectionData");
       this.socket = io(BASE_DOMAIN, {
         forceNew: true,
-        // transports: ["websocket", "polling"],
         timeout: 10000,
         reconnection: true,
         reconnectionAttempts: 5,
@@ -110,6 +78,8 @@ class SocketService {
 
     this.socket.on("connect", () => {
       this.debugLog("Socket connected successfully");
+      this.subscribePrintOrderSocket();
+      this.subscribeRequestPrinterScan();
       this.joinRestaurantRoom(this.connectionData?.data.user.restaurant.id);
     });
 
@@ -121,7 +91,6 @@ class SocketService {
       this.debugLog("Socket disconnected:", reason);
     });
 
-    // Add room join confirmation listener
     this.socket.on("roomJoined", (data: { room: string }) => {
       this.debugLog("Successfully joined room:", data.room);
     });
@@ -233,10 +202,17 @@ class SocketService {
   }
 
   private async subscribeRequestPrinterScan(): Promise<void> {
-    if (!this.socket || !this.connectionData) return;
-    const printerDiscoveredEvent = `requestPrinterScan:${this.connectionData?.data.user.restaurant.id}`;
-    this.socket?.off(printerDiscoveredEvent, () => {});
-    this.socket!.on(printerDiscoveredEvent, async () => {
+    if (!this.socket?.connected || !this.connectionData) {
+      this.debugLog(
+        "Cannot subscribe to printer scan - not connected or no connection data"
+      );
+      return;
+    }
+
+    const printerDiscoveredEvent = `requestPrinterScan:${this.connectionData.data.user.restaurant.id}`;
+    this.socket.off(printerDiscoveredEvent);
+
+    this.socket.on(printerDiscoveredEvent, async () => {
       const printers = await findPrinters();
       const printersArr = printers ? Object.values(printers) : [];
       await postPrinterAppDiscovered(
@@ -244,13 +220,22 @@ class SocketService {
         this.connectionData?.data.connectionCode
       );
     });
+
+    this.debugLog(`Subscribed to ${printerDiscoveredEvent}`);
   }
 
   private async subscribePrintOrderSocket(): Promise<void> {
-    if (!this.socket || !this.connectionData) return;
-    const printOrderEvent = `printOrder:${this.connectionData?.data.user.restaurant.id}`;
-    this.socket?.off(printOrderEvent, () => {});
-    this.socket!.on(printOrderEvent, async (order: OrderIO) => {
+    if (!this.socket?.connected || !this.connectionData) {
+      this.debugLog(
+        "Cannot subscribe to print order socket - not connected or no connection data"
+      );
+      return;
+    }
+
+    const printOrderEvent = `printOrder:${this.connectionData.data.user.restaurant.id}`;
+    this.socket.off(printOrderEvent); // Remove any existing listeners
+
+    this.socket.on(printOrderEvent, async (order: OrderIO) => {
       const printer = new OrderPrinterAdapter({
         printerIP: "192.168.1.7",
         printerType: PrinterTypes.EPSON,
@@ -265,6 +250,8 @@ class SocketService {
       }
       console.log("[Main] Receive Order To Print", order);
     });
+
+    this.debugLog(`Subscribed to ${printOrderEvent}`);
   }
 
   private async performHealthCheck(): Promise<void> {
