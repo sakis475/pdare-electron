@@ -8,6 +8,7 @@ import { CharacterSet, PrinterTypes } from "node-thermal-printer";
 import { ipcMain } from "electron";
 
 import { getStoredConnection } from "../../main/storage/StorageUtil";
+import { printOrder } from "../printers/Print/printerHelpers";
 
 interface PrintOrderData {
   timestamp: number;
@@ -233,22 +234,10 @@ class SocketService {
     }
 
     const printOrderEvent = `printOrder:${this.connectionData.data.user.restaurant.id}`;
-    this.socket.off(printOrderEvent); // Remove any existing listeners
+    this.socket.off(printOrderEvent);
 
     this.socket.on(printOrderEvent, async (order: OrderIO) => {
-      const printer = new OrderPrinterAdapter({
-        printerIP: "192.168.1.7",
-        printerType: PrinterTypes.EPSON,
-        characterSet: CharacterSet.PC737_GREEK,
-      });
-
-      const success = await printer.printOrder(order);
-      if (success) {
-        console.log("Order printed successfully");
-      } else {
-        console.log("Failed to print order");
-      }
-      console.log("[Main] Receive Order To Print", order);
+      await printOrder(order);
     });
 
     this.debugLog(`Subscribed to ${printOrderEvent}`);

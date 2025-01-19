@@ -36,6 +36,7 @@ interface Category {
   orderCategory?: number;
   isEnabled?: boolean;
   color?: string;
+  printLocation?: PrintLocation;
 }
 
 interface PropertyPattern {
@@ -167,8 +168,29 @@ interface InvitationRequest {
   createdAt: Date;
 }
 
+interface Printer {
+  ip: string;
+  port: number;
+  mac: string;
+  lastSeen?: string;
+  nickname?: string;
+  model?: string;
+  online?: boolean;
+}
+
 enum InvitationRequestStatus {
   ACCEPTED = "accepted",
   CANCELLED = "cancelled",
   AWAITING = "awaiting",
+}
+
+enum PrintLocation {
+  KITCHEN = "kitchen",
+  BAR = "bar",
+  ALL = "all",
+}
+
+enum PrintType {
+  PERSONEL = "personel",
+  FINAL = "final",
 }

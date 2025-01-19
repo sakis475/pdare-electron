@@ -15,7 +15,6 @@ type OrderIO = {
   id: number;
   uniqueId?: string;
   table: Table;
-  orderItems: OrderItemIO[];
   couvert: number;
   comment: string;
   createdAt: string;
@@ -23,6 +22,8 @@ type OrderIO = {
   orderReady: boolean;
   user: User;
   finalCost: number;
+  orderPrinters: OrderPrinters[];
+  printType: PrintType;
 };
 
 type TableIO = {
@@ -31,4 +32,13 @@ type TableIO = {
   isEnabled: boolean;
   tableOrder: number;
   occupiedByOrder: OrderIO;
+};
+
+type OrderPrinters = {
+  mac: string;
+  printLocation: PrintLocation;
+  overrideIP?: string;
+  overridePort?: string;
+  characterSet?: any;
+  orderItems: OrderItemIO[];
 };

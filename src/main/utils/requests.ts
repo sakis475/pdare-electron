@@ -1,7 +1,6 @@
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import axios from "axios";
 
-import { BASE_DOMAIN, BASE_URL } from "../../../env";
-import { Printer } from "../../main/printers/PrinterScan/SearchPrinters";
+import { BASE_URL } from "../../../env";
 
 export async function getHealthCheck(connectionCode: string) {
   const url = BASE_URL + "/health-check-printer";
@@ -51,30 +50,3 @@ export async function postPrinterAppDiscovered(
   console.log("POST " + BASE_URL + url, printers);
   const response = await axios.post(BASE_URL + url, { printers }, options);
 }
-// function handleAxiosError(error: any) {
-//   if (axios.isAxiosError(error)) {
-//     if (error?.response?.data?.appcode) {
-//       switch (error.response.data.appcode) {
-//         case "DT10":
-//           toast("error", "Table is occupied, choose other table", "", 2500);
-//           break;
-
-//         default:
-//           toast("error", error.response.data.message, "", 2500);
-//           break;
-//       }
-//     } else if (error.request) {
-//       toast("error", "No Server Response", "", 2000);
-//     } else {
-//       toast("error", error?.message);
-//     }
-//   } else {
-//     console.error("Unexpected error:", error);
-
-//     toast("error", "An error occurred while processing your request");
-//   }
-
-//   if (error?.response?.status === 401) {
-//     navigate(ScreenNames.LoginScreen);
-//   }
-// }

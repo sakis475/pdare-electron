@@ -3,16 +3,6 @@ const os = require("os");
 const { exec } = require("child_process");
 import { storage, STORAGE_KEYS } from "../../storage/StorageUtil";
 
-export interface Printer {
-  ip: string;
-  port: number;
-  mac: string;
-  lastSeen: string;
-  nickname?: string;
-  model: string;
-  online?: boolean;
-}
-
 export interface PrinterMap {
   [mac: string]: Printer;
 }
@@ -27,7 +17,7 @@ class SearchPrinters {
   private readonly BATCH_SIZE: number = 128; // Number of simultaneous connections
   private readonly PRINTER_PORT: number = 9100; // Focus on main printer port
 
-  private async loadPrinters(): Promise<PrinterMap> {
+  public async loadPrinters(): Promise<PrinterMap> {
     try {
       const data = await storage.get(STORAGE_KEYS.PRINTERS_DATA);
       return data ? (data as PrinterMap) : {};

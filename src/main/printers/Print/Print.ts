@@ -5,7 +5,8 @@ import {
 } from "node-thermal-printer";
 
 interface PrinterConfig {
-  printerIP?: string;
+  printerIP: string;
+  printerPort?: string;
   printerType?: PrinterTypes;
   characterSet?: CharacterSet;
   timeout?: number;
@@ -33,9 +34,10 @@ class OrderPrinterAdapter {
   private config: Required<PrinterConfig>;
   private printer: ThermalPrinter;
 
-  constructor(config: PrinterConfig = {}) {
+  constructor(config: PrinterConfig) {
     this.config = {
-      printerIP: config.printerIP || "192.168.1.7",
+      printerIP: config.printerIP!,
+      printerPort: config.printerPort || "9100",
       printerType: config.printerType || PrinterTypes.EPSON,
       characterSet: config.characterSet || CharacterSet.PC737_GREEK,
       timeout: config.timeout || 5000,
@@ -43,7 +45,7 @@ class OrderPrinterAdapter {
 
     this.printer = new ThermalPrinter({
       type: this.config.printerType,
-      interface: `tcp://${this.config.printerIP}`,
+      interface: `tcp://${this.config.printerIP}:${this.config.printerPort}`,
       characterSet: this.config.characterSet,
       removeSpecialCharacters: false,
       options: { timeout: this.config.timeout },
@@ -98,7 +100,10 @@ class OrderPrinterAdapter {
     };
   }
 
-  async printOrder(order: OrderIO): Promise<boolean> {
+  async printOrder(
+    order: OrderIO,
+    orderItems: OrderItemIO[]
+  ): Promise<boolean> {
     try {
       const isConnected = await this.printer.isPrinterConnected();
       if (!isConnected) {
@@ -112,15 +117,15 @@ class OrderPrinterAdapter {
       this.printOrderInfo(order);
 
       // Print Items
-      this.printItems(order.orderItems);
+      this.printItems(orderItems);
 
       // Print Totals
-      const totals = this.calculateTotals(order.orderItems, order.couvert);
+      const totals = this.calculateTotals(orderItems, order.couvert);
       this.printTotals(totals);
 
       // Print Footer
       this.printFooter();
-
+      console.log("print execute");
       // Execute print job
       await this.printer.execute();
       return true;
