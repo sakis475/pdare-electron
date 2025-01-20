@@ -1,6 +1,9 @@
 import { ipcRenderer } from "electron";
 
 export const bridge = {
+  getConnectionStatusSocket: async (): Promise<boolean> => {
+    return await ipcRenderer.invoke("get-connection-status-socket");
+  },
   reconnectSocket: async (): Promise<number> => {
     return await ipcRenderer.invoke("reconnect-socket");
   },

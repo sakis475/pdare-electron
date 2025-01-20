@@ -1,38 +1,81 @@
 import React, { useEffect, useState } from "react";
 import LoginForm from "./LoginForm";
 import { bridge } from "./bridges/bridge";
-// import { ConnectionBridge } from "../main/bridges/ConnectionBridge";
 
-// const storageBridge = new ConnectionBridge();
+type ConnectionStatus = "connected" | "disconnected" | "reconnecting";
 
 const App: React.FC = () => {
   const [socketInitialized, setSocketInitialized] = useState<boolean>(false);
   const [hasStoredConnection, setHasStoredConnection] =
     useState<boolean>(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("disconnected");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   useEffect(() => {
     checkConnectionStatus();
-  }, []);
+
+    // Set up connection status check interval
+    const intervalId = setInterval(async () => {
+      try {
+        const status = await bridge.getConnectionStatusSocket();
+        const isConnected = status === true; // adjust based on your actual API response
+
+        if (isConnected && connectionStatus !== "connected") {
+          setConnectionStatus("connected");
+          setErrorMessage("");
+          setReconnectAttempts(0);
+        } else if (!isConnected && connectionStatus === "connected") {
+          setConnectionStatus("disconnected");
+          handleConnectionLost();
+        }
+      } catch (error) {
+        console.error("Error checking connection:", error);
+        setConnectionStatus("disconnected");
+        handleConnectionLost();
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [connectionStatus]);
+
+  const handleConnectionLost = () => {
+    setReconnectAttempts((prev) => prev + 1);
+
+    // Different messages based on reconnection attempts
+    if (reconnectAttempts < 3) {
+      setErrorMessage("Connection lost. Attempting to reconnect...");
+      bridge.reconnectSocket();
+    } else if (reconnectAttempts < 5) {
+      setErrorMessage(
+        "Having trouble connecting. Please check your internet connection."
+      );
+    } else {
+      setErrorMessage(
+        "Connection issues persist. Try these steps:\n1. Check your internet connection\n2. Restart the app\n3. Log out and log back in"
+      );
+    }
+  };
+
   const checkConnectionStatus = async () => {
     const storedConnection = await bridge.getStoredConnection();
-    // console.log("[App Debug] Checking connection status:", storedConnection);
     const hasConnection = !!storedConnection;
     setHasStoredConnection(hasConnection);
-    // if (hasConnection) {
-    //   socketService.reconnect();
-    // }
   };
 
   const handleLoginSuccess = async () => {
     console.log("Login success called");
     checkConnectionStatus();
-
     const storedConnection = await bridge.getStoredConnection();
     const restaurantId = storedConnection?.data?.user?.restaurant?.id;
     if (restaurantId) {
       console.log("[App Debug] Joining restaurant room:", restaurantId);
     }
     bridge.reconnectSocket();
+    setConnectionStatus("connected");
+    setErrorMessage("");
+    setReconnectAttempts(0);
   };
 
   const handleLogout = async () => {
@@ -40,6 +83,20 @@ const App: React.FC = () => {
     bridge.disconnectSocket();
     await bridge.clearStoredConnection();
     checkConnectionStatus();
+    setConnectionStatus("disconnected");
+    setErrorMessage("");
+    setReconnectAttempts(0);
+  };
+
+  const getStatusColor = () => {
+    switch (connectionStatus) {
+      case "connected":
+        return "#4CAF50";
+      case "reconnecting":
+        return "#FFA500";
+      case "disconnected":
+        return "#FF6B6B";
+    }
   };
 
   return (
@@ -68,11 +125,10 @@ const App: React.FC = () => {
         >
           <div>
             Status:{" "}
-            {socketInitialized ? (
-              <span style={{ color: "#4CAF50" }}>Connected</span>
-            ) : (
-              <span style={{ color: "#FFA500" }}>Disconnected</span>
-            )}
+            <span style={{ color: getStatusColor() }}>
+              {connectionStatus.charAt(0).toUpperCase() +
+                connectionStatus.slice(1)}
+            </span>
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             {hasStoredConnection && (
@@ -100,11 +156,29 @@ const App: React.FC = () => {
         style={{
           paddingTop: "60px",
           display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
           minHeight: "calc(100vh - 60px)",
         }}
       >
+        {errorMessage && (
+          <div
+            style={{
+              backgroundColor: "#FFF3CD",
+              color: "#856404",
+              padding: "15px",
+              borderRadius: "4px",
+              marginBottom: "20px",
+              maxWidth: "80%",
+              textAlign: "center",
+              whiteSpace: "pre-line",
+            }}
+          >
+            {errorMessage}
+          </div>
+        )}
+
         {!hasStoredConnection ? (
           <LoginForm onLoginSuccess={handleLoginSuccess} />
         ) : (
@@ -117,10 +191,16 @@ const App: React.FC = () => {
               textAlign: "center",
             }}
           >
-            <h2 style={{ color: "#4CAF50", marginBottom: "20px" }}>
-              Connection Established
+            <h2 style={{ color: getStatusColor(), marginBottom: "20px" }}>
+              {connectionStatus === "connected"
+                ? "Connection Established"
+                : "Checking Connection..."}
             </h2>
-            <p>You are connected to the service.</p>
+            <p>
+              {connectionStatus === "connected"
+                ? "You are connected to the service."
+                : "Attempting to establish connection..."}
+            </p>
           </div>
         )}
       </div>

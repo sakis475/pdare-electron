@@ -3,8 +3,6 @@ import { BASE_DOMAIN, BASE_URL } from "../../../env";
 import { getHealthCheck, postPrinterAppDiscovered } from "./requests";
 import { findPrinters } from "../../main/printers/PrinterScan/printersUtil";
 
-import OrderPrinterAdapter from "../../main/printers/Print/Print";
-import { CharacterSet, PrinterTypes } from "node-thermal-printer";
 import { ipcMain } from "electron";
 
 import { getStoredConnection } from "../../main/storage/StorageUtil";
@@ -301,6 +299,12 @@ class SocketService {
     }
   }
 }
+
+export const getConnectionStatusSocket = () => {
+  ipcMain.handle("get-connection-status-socket", (event) => {
+    return socketService.getConnectionStatus();
+  });
+};
 
 export const setupSocketBridge = () => {
   ipcMain.handle("reconnect-socket", (event) => {

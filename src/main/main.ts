@@ -1,7 +1,11 @@
 import { app, BrowserWindow, session, powerSaveBlocker } from "electron";
 import * as path from "path";
 import { NODE_ENV } from "../../env";
-import { disconnectSocket, setupSocketBridge } from "./utils/socket";
+import {
+  disconnectSocket,
+  getConnectionStatusSocket,
+  setupSocketBridge,
+} from "./utils/socket";
 import {
   clearConnectionBridge,
   fetchAndStoreConnectionBridge,
@@ -27,22 +31,22 @@ async function createWindow() {
   });
 
   // Configure CSP headers
-  mainWindow.webContents.session.webRequest.onHeadersReceived(
-    (details, callback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          "Content-Security-Policy": [
-            "default-src 'self';" +
-              "script-src 'self';" +
-              // Add both WS and HTTP endpoints
-              "connect-src 'self' ws://localhost:8000 http://localhost:8000 wss://localhost:8000;" +
-              "style-src 'self' 'unsafe-inline';",
-          ],
-        },
-      });
-    }
-  );
+  // mainWindow.webContents.session.webRequest.onHeadersReceived(
+  //   (details, callback) => {
+  //     callback({
+  //       responseHeaders: {
+  //         ...details.responseHeaders,
+  //         "Content-Security-Policy": [
+  //           "default-src 'self';" +
+  //             "script-src 'self';" +
+  //             // Add both WS and HTTP endpoints
+  //             "connect-src 'self' ws://localhost:8000 http://localhost:8000 wss://localhost:8000;" +
+  //             "style-src 'self' 'unsafe-inline';",
+  //         ],
+  //       },
+  //     });
+  //   }
+  // );
 
   // Enable remote debugging in development
   if (NODE_ENV === "development") {
@@ -53,6 +57,7 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+  getConnectionStatusSocket();
   setupSocketBridge();
   disconnectSocket();
   fetchAndStoreConnectionBridge();

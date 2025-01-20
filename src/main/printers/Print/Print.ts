@@ -6,7 +6,7 @@ import {
 
 interface PrinterConfig {
   printerIP: string;
-  printerPort?: string;
+  printerPort?: string | null;
   printerType?: PrinterTypes;
   characterSet?: CharacterSet;
   timeout?: number;
@@ -36,16 +36,19 @@ class OrderPrinterAdapter {
 
   constructor(config: PrinterConfig) {
     this.config = {
-      printerIP: config.printerIP!,
-      printerPort: config.printerPort || "9100",
+      printerIP: config.printerIP,
+      printerPort: config.printerPort ? config.printerPort : null,
       printerType: config.printerType || PrinterTypes.EPSON,
       characterSet: config.characterSet || CharacterSet.PC737_GREEK,
       timeout: config.timeout || 5000,
     };
 
+    const interfaceprinter = `tcp://${this.config.printerIP}${
+      this.config.printerPort ? ":" + this.config.printerPort : ""
+    }`;
     this.printer = new ThermalPrinter({
       type: this.config.printerType,
-      interface: `tcp://${this.config.printerIP}:${this.config.printerPort}`,
+      interface: interfaceprinter,
       characterSet: this.config.characterSet,
       removeSpecialCharacters: false,
       options: { timeout: this.config.timeout },
