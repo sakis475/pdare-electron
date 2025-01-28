@@ -27,13 +27,12 @@ interface OrderTotals {
   subtotal: number;
   tax: number;
   total: number;
-  couvert: number;
 }
 
 class OrderPrinterAdapter {
   private config: Required<PrinterConfig>;
   private printer: ThermalPrinter;
-
+  private currency: string = "€";
   constructor(config: PrinterConfig) {
     this.config = {
       printerIP: config.printerIP,
@@ -85,24 +84,6 @@ class OrderPrinterAdapter {
     }));
   }
 
-  private calculateTotals(
-    orderItems: OrderItemIO[],
-    couvert: number
-  ): OrderTotals {
-    const subtotal =
-      orderItems.reduce(
-        (sum, item) => sum + item.item.cost * item.quantity,
-        0
-      ) + couvert;
-    const tax = subtotal * 0.24; // 24% VAT
-    return {
-      subtotal,
-      tax,
-      total: subtotal + tax,
-      couvert,
-    };
-  }
-
   async printOrder(
     order: OrderIO,
     orderItems: OrderItemIO[]
@@ -113,18 +94,21 @@ class OrderPrinterAdapter {
         throw new Error("Printer not connected");
       }
 
+      this.currency = order.user?.restaurant?.currencySymbol
+        ? order.user?.restaurant?.currencySymbol
+        : "€";
+
       // Print Header
       this.printHeader(order.user?.restaurant);
 
       // Print Order Info
       this.printOrderInfo(order);
 
-      // Print Items
-      this.printItems(orderItems);
+      // Print Items (including Couvert if applicable)
+      this.printItems(orderItems, order.couvert);
 
       // Print Totals
-      const totals = this.calculateTotals(orderItems, order.couvert);
-      this.printTotals(totals);
+      this.printTotals(order.finalCost);
 
       // Print Footer
       this.printFooter();
@@ -175,16 +159,25 @@ class OrderPrinterAdapter {
     this.printer.drawLine();
   }
 
-  private printItems(orderItems: OrderItemIO[]): void {
+  private printItems(orderItems: OrderItemIO[], couvert: number): void {
     this.printer.bold(true);
     this.printer.println("ΠΑΡΑΓΓΕΛΙΑ");
     this.printer.bold(false);
     this.printer.newLine();
 
+    // Print Couvert first if it exists
+    if (couvert > 0) {
+      const leftText = `${couvert}x Κουβέρ`;
+      const rightText = `${couvert.toFixed(2)}${this.currency}`;
+      this.printer.leftRight(leftText, rightText);
+      this.printer.newLine();
+    }
+
+    // Print regular items
     orderItems.forEach((item) => {
       const total = item.item.cost * item.quantity;
       const leftText = `${item.quantity}x ${item.item.title}`;
-      const rightText = `${total.toFixed(2)}€`;
+      const rightText = `${total.toFixed(2)}${this.currency}`;
       this.printer.leftRight(leftText, rightText);
 
       // Print item properties if any
@@ -203,17 +196,10 @@ class OrderPrinterAdapter {
     });
   }
 
-  private printTotals(totals: OrderTotals): void {
+  private printTotals(final: number): void {
     this.printer.drawLine();
-
-    if (totals.couvert > 0) {
-      this.printer.leftRight("Κουβέρ:", `${totals.couvert.toFixed(2)}€`);
-    }
-
-    this.printer.leftRight("Υποσύνολο:", `${totals.subtotal.toFixed(2)}€`);
-    this.printer.leftRight("ΦΠΑ 24%:", `${totals.tax.toFixed(2)}€`);
     this.printer.bold(true);
-    this.printer.leftRight("ΣΥΝΟΛΟ:", `${totals.total.toFixed(2)}€`);
+    this.printer.leftRight("ΣΥΝΟΛΟ:", `${final.toFixed(2)}${this.currency}`);
     this.printer.bold(false);
   }
 

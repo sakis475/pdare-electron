@@ -1,6 +1,7 @@
 import { CharacterSet, PrinterTypes } from "node-thermal-printer";
 import SearchPrinters from "../PrinterScan/SearchPrinters";
 import OrderPrinterAdapter from "./Print";
+import { findPrinters } from "../PrinterScan/printersUtil";
 
 const searchPrintersModule = new SearchPrinters();
 
@@ -11,20 +12,40 @@ enum PrintType {
 
 export const printOrder = async (order: OrderIO) => {
   const printerToPrint = order.orderPrinters;
-  console.log(printerToPrint, "printerToPrint");
   const localPrinters = await searchPrintersModule.loadPrinters();
   const availablePrinters = localPrinters ? Object.values(localPrinters) : [];
   console.log(availablePrinters, "availablePrinters");
   for (const printer of printerToPrint) {
-    if (
-      order.printType === PrintType.PERSONEL &&
-      !!order.orderPrinters?.length
-    ) {
+    if (!order.orderPrinters?.length) {
       continue;
     }
-    const availablePrinter = availablePrinters.find(
-      (e) => e.mac === printer.mac
-    );
+    let availablePrinter = availablePrinters.find((e) => e.mac === printer.mac);
+
+    if (!availablePrinter) {
+      // Create a promise that rejects after 10 seconds
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Printer search timeout")), 10000);
+      });
+
+      try {
+        // Race between the printer search and the timeout
+        const printersNow = await Promise.race([
+          findPrinters(),
+          timeoutPromise,
+        ]);
+
+        const availablePrintersSearched = printersNow
+          ? Object.values(printersNow)
+          : [];
+
+        availablePrinter = availablePrintersSearched.find(
+          (e) => e.mac === printer.mac
+        );
+      } catch {
+        console.warn("Printer search failed");
+        availablePrinter = undefined;
+      }
+    }
     if (availablePrinter) {
       const printerIP = printer.overrideIP
         ? printer.overrideIP
@@ -45,7 +66,6 @@ export const printOrder = async (order: OrderIO) => {
         printerType: PrinterTypes.EPSON,
         characterSet,
       });
-
       const success = await printerAdapter.printOrder(
         order,
         printer.orderItems
@@ -56,6 +76,8 @@ export const printOrder = async (order: OrderIO) => {
       } else {
         console.log("Failed to print order");
       }
+    } else {
+      console.log("Skipped", printer);
     }
   }
 
