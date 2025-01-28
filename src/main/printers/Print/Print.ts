@@ -33,6 +33,7 @@ class OrderPrinterAdapter {
   private config: Required<PrinterConfig>;
   private printer: ThermalPrinter;
   private currency: string = "€";
+
   constructor(config: PrinterConfig) {
     this.config = {
       printerIP: config.printerIP,
@@ -84,6 +85,75 @@ class OrderPrinterAdapter {
     }));
   }
 
+  private printItemLine(text: string, price: string): void {
+    // Using leftRight for two-column layout
+    this.printer.leftRight(text, price);
+  }
+
+  private printItems(orderItems: OrderItemIO[], couvert: number): void {
+    this.printer.alignCenter();
+    this.printer.setTextDoubleHeight();
+    this.printer.setTextDoubleWidth();
+    this.printer.bold(true);
+    this.printer.println("ΑΝΑΛΥΣΗ ΠΑΡΑΓΓΕΛΙΑΣ");
+    this.printer.bold(false);
+    this.printer.setTextNormal();
+    this.printer.alignLeft();
+    this.printer.drawLine();
+
+    // Print Couvert first if it exists
+    if (couvert > 0) {
+      const text = `${couvert}x Κουβέρ`;
+      const price = `${couvert.toFixed(2)}${this.currency}`;
+      this.printItemLine(text, price);
+    }
+
+    // Print regular items
+    orderItems.forEach((item) => {
+      const total = item.item.cost * item.quantity;
+      const text = `${item.quantity}x ${item.item.title}`;
+      const price = `${total.toFixed(2)}${this.currency}`;
+
+      // If text is too long, split it into multiple lines
+      const maxLength = 32; // Adjust based on your printer's width
+      if (text.length > maxLength) {
+        const lines =
+          text.match(new RegExp(`.{1,${maxLength}}(?:\\s|$)`, "g")) || [];
+        lines.forEach((line, index) => {
+          if (index === lines.length - 1) {
+            // Last line gets the price
+            this.printItemLine(line.trim(), price);
+          } else {
+            // Other lines just print the text
+            this.printer.println(line.trim());
+          }
+        });
+      } else {
+        this.printItemLine(text, price);
+      }
+
+      // Print item properties if any
+      if (item.itemPropertyOfItem.length > 0) {
+        item.itemPropertyOfItem.forEach((prop) => {
+          const propText = `  - ${prop.itemProperty.propertyName}: ${prop.itemProperty.propertyValue}`;
+          this.printer.println(propText);
+        });
+      }
+
+      // Print item comment if any
+      if (item.comment) {
+        this.printer.println(`  * ${item.comment}`);
+      }
+    });
+  }
+
+  private printTotals(final: number): void {
+    this.printer.drawLine();
+    this.printer.bold(true);
+    this.printItemLine("ΣΥΝΟΛΟ:", `${final.toFixed(2)}${this.currency}`);
+    this.printer.bold(false);
+  }
+
   async printOrder(
     order: OrderIO,
     orderItems: OrderItemIO[]
@@ -98,22 +168,12 @@ class OrderPrinterAdapter {
         ? order.user?.restaurant?.currencySymbol
         : "€";
 
-      // Print Header
       this.printHeader(order.user?.restaurant);
-
-      // Print Order Info
       this.printOrderInfo(order);
-
-      // Print Items (including Couvert if applicable)
       this.printItems(orderItems, order.couvert);
-
-      // Print Totals
       this.printTotals(order.finalCost);
-
-      // Print Footer
       this.printFooter();
-      console.log("print execute");
-      // Execute print job
+
       await this.printer.execute();
       return true;
     } catch (error) {
@@ -129,6 +189,8 @@ class OrderPrinterAdapter {
     if (!restaurant) return;
 
     this.printer.alignCenter();
+
+    // Print restaurant name
     this.printer.setTextDoubleHeight();
     this.printer.setTextDoubleWidth();
     this.printer.bold(true);
@@ -141,7 +203,6 @@ class OrderPrinterAdapter {
   private printOrderInfo(order: OrderIO): void {
     this.printer.alignLeft();
 
-    // Order number and date
     if (order.uniqueId) {
       this.printer.println(`Αριθμός Παραγγελίας: #${order.uniqueId}`);
     }
@@ -150,57 +211,12 @@ class OrderPrinterAdapter {
       this.printer.println(`Ώρα: ${this.formatTime(order.createdAt)}`);
     }
 
-    // Table info
     this.printer.println(`Τραπέζι: ${order.table.tableName}`);
     if (order.user?.displayName) {
       this.printer.println(`Σερβιτόρος: ${order.user.displayName}`);
     }
 
     this.printer.drawLine();
-  }
-
-  private printItems(orderItems: OrderItemIO[], couvert: number): void {
-    this.printer.bold(true);
-    this.printer.println("ΠΑΡΑΓΓΕΛΙΑ");
-    this.printer.bold(false);
-    this.printer.newLine();
-
-    // Print Couvert first if it exists
-    if (couvert > 0) {
-      const leftText = `${couvert}x Κουβέρ`;
-      const rightText = `${couvert.toFixed(2)}${this.currency}`;
-      this.printer.leftRight(leftText, rightText);
-      this.printer.newLine();
-    }
-
-    // Print regular items
-    orderItems.forEach((item) => {
-      const total = item.item.cost * item.quantity;
-      const leftText = `${item.quantity}x ${item.item.title}`;
-      const rightText = `${total.toFixed(2)}${this.currency}`;
-      this.printer.leftRight(leftText, rightText);
-
-      // Print item properties if any
-      if (item.itemPropertyOfItem.length > 0) {
-        item.itemPropertyOfItem.forEach((prop) => {
-          this.printer.println(
-            `  - ${prop.itemProperty.propertyName}: ${prop.itemProperty.propertyValue}`
-          );
-        });
-      }
-
-      // Print item comment if any
-      if (item.comment) {
-        this.printer.println(`  * ${item.comment}`);
-      }
-    });
-  }
-
-  private printTotals(final: number): void {
-    this.printer.drawLine();
-    this.printer.bold(true);
-    this.printer.leftRight("ΣΥΝΟΛΟ:", `${final.toFixed(2)}${this.currency}`);
-    this.printer.bold(false);
   }
 
   private printFooter(): void {
