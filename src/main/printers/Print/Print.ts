@@ -14,9 +14,8 @@ interface PrinterConfig {
 
 interface PrinterTemplate {
   header?: {
-    // Restaurant name is always at the top
-    subtitle?: string; // Optional text under restaurant name
-    extraLines?: string[]; // Additional lines at end of header
+    subtitle?: string;
+    extraLines?: string[];
   };
   orderInfo?: {
     showOrderNumber?: boolean;
@@ -24,28 +23,26 @@ interface PrinterTemplate {
     showTime?: boolean;
     showTable?: boolean;
     showServer?: boolean;
-    // Text customization
-    orderNumberLabel?: string; // Default: "Αριθμός Παραγγελίας"
-    dateLabel?: string; // Default: "Ημερομηνία"
-    timeLabel?: string; // Default: "Ώρα"
-    tableLabel?: string; // Default: "Τραπέζι"
-    serverLabel?: string; // Default: "Σερβιτόρος"
-    dateFormat?: string; // Default: "dd/MM/yyyy"
-    timeFormat?: string; // Default: "HH:mm"
+    orderNumberLabel?: string;
+    dateLabel?: string;
+    timeLabel?: string;
+    tableLabel?: string;
+    serverLabel?: string;
+    dateFormat?: string;
+    timeFormat?: string;
   };
-  orderTitle?: string; // Title above items (default: "ΑΝΑΛΥΣΗ ΠΑΡΑΓΓΕΛΙΑΣ")
+  orderTitle?: string;
   items?: {
-    couvertText?: string; // Default: "Κουβέρ"
+    couvertText?: string;
   };
   totals?: {
-    totalLabel?: string; // Default: "ΣΥΝΟΛΟ"
+    totalLabel?: string;
   };
   footer?: {
-    lines?: string[]; // Footer text lines (default thank you message)
+    lines?: string[];
   };
 }
 
-// Default template
 const defaultTemplate: PrinterTemplate = {
   orderInfo: {
     showOrderNumber: true,
@@ -69,7 +66,7 @@ const defaultTemplate: PrinterTemplate = {
     totalLabel: "ΣΥΝΟΛΟ",
   },
   footer: {
-    lines: [],
+    lines: ["Σας ευχαριστούμε!", "Καλή όρεξη!"],
   },
 };
 
@@ -119,50 +116,63 @@ class OrderPrinterAdapter {
       .replace("mm", date.getMinutes().toString().padStart(2, "0"));
   }
 
-  private printItemLine(text: string, price: string): void {
-    this.printer.leftRight(text, price);
-  }
-
-  private printItems(orderItems: OrderItemIO[], couvert: number): void {
-    // Print title
-    this.printer.alignCenter();
-    this.printer.setTextDoubleHeight();
-    this.printer.setTextDoubleWidth();
-    this.printer.bold(true);
-    this.printer.println(this.template.orderTitle || "ΑΝΑΛΥΣΗ ΠΑΡΑΓΓΕΛΙΑΣ");
-    this.printer.bold(false);
-    this.printer.setTextNormal();
-    this.printer.alignLeft();
-    this.printer.drawLine();
+  private printItems(
+    orderItems: OrderItemIO[],
+    couvert: number,
+    printType: PrintType
+  ): void {
+    // Print title only for final print
+    if (printType === "final") {
+      this.printer.alignCenter();
+      this.printer.setTextDoubleHeight();
+      this.printer.setTextDoubleWidth();
+      this.printer.bold(true);
+      this.printer.println(this.template.orderTitle || "ΑΝΑΛΥΣΗ ΠΑΡΑΓΓΕΛΙΑΣ");
+      this.printer.bold(false);
+      this.printer.setTextNormal();
+      this.printer.alignLeft();
+      this.printer.drawLine();
+    }
 
     // Print Couvert
     if (couvert > 0) {
       const couvertText = this.template.items?.couvertText || "Κουβέρ";
-      const text = `${couvert}x ${couvertText}`;
-      const price = `${couvert.toFixed(2)}${this.currency}`;
-      this.printItemLine(text, price);
+      if (printType === "final") {
+        this.printItemLine(
+          `${couvert}x ${couvertText}`,
+          `${couvert.toFixed(2)}${this.currency}`
+        );
+      } else {
+        this.printer.println(`${couvert}x ${couvertText}`);
+      }
     }
 
     // Print items
     orderItems.forEach((item) => {
-      const total = item.item.cost * item.quantity;
       const text = `${item.quantity}x ${item.item.title}`;
-      const price = `${total.toFixed(2)}${this.currency}`;
 
-      // Handle long text
-      const maxLength = 32;
-      if (text.length > maxLength) {
-        const lines =
-          text.match(new RegExp(`.{1,${maxLength}}(?:\\s|$)`, "g")) || [];
-        lines.forEach((line, index) => {
-          if (index === lines.length - 1) {
-            this.printItemLine(line.trim(), price);
-          } else {
-            this.printer.println(line.trim());
-          }
-        });
+      if (printType === "final") {
+        const total = item.item.cost * item.quantity;
+        const price = `${total.toFixed(2)}${this.currency}`;
+
+        // For final print, use two columns with price
+        const maxLength = 32;
+        if (text.length > maxLength) {
+          const lines =
+            text.match(new RegExp(`.{1,${maxLength}}(?:\\s|$)`, "g")) || [];
+          lines.forEach((line, index) => {
+            if (index === lines.length - 1) {
+              this.printItemLine(line.trim(), price);
+            } else {
+              this.printer.println(line.trim());
+            }
+          });
+        } else {
+          this.printItemLine(text, price);
+        }
       } else {
-        this.printItemLine(text, price);
+        // For personnel print, use full width
+        this.printer.println(text);
       }
 
       // Print properties
@@ -180,12 +190,17 @@ class OrderPrinterAdapter {
     });
   }
 
-  private printHeader(restaurant: Restaurant | undefined): void {
-    if (!restaurant) return;
+  private printItemLine(text: string, price: string): void {
+    this.printer.leftRight(text, price);
+  }
+
+  private printHeader(
+    restaurant: Restaurant | undefined,
+    printType: PrintType
+  ): void {
+    if (!restaurant || printType === "personel") return;
 
     this.printer.alignCenter();
-
-    // Restaurant name
     this.printer.setTextDoubleHeight();
     this.printer.setTextDoubleWidth();
     this.printer.bold(true);
@@ -193,12 +208,10 @@ class OrderPrinterAdapter {
     this.printer.bold(false);
     this.printer.setTextNormal();
 
-    // Subtitle if specified
     if (this.template.header?.subtitle) {
       this.printer.println(this.template.header.subtitle);
     }
 
-    // Extra header lines
     if (this.template.header?.extraLines) {
       this.template.header.extraLines.forEach((line) => {
         this.printer.println(line);
@@ -210,7 +223,6 @@ class OrderPrinterAdapter {
 
   private printOrderInfo(order: OrderIO): void {
     this.printer.alignLeft();
-
     const info = this.template.orderInfo || {};
 
     if (info.showOrderNumber && order.uniqueId) {
@@ -242,7 +254,9 @@ class OrderPrinterAdapter {
     this.printer.drawLine();
   }
 
-  private printTotals(final: number): void {
+  private printTotals(final: number, printType: PrintType): void {
+    if (printType === "personel") return;
+
     this.printer.drawLine();
     this.printer.bold(true);
     const totalLabel = this.template.totals?.totalLabel || "ΣΥΝΟΛΟ";
@@ -250,24 +264,26 @@ class OrderPrinterAdapter {
     this.printer.bold(false);
   }
 
-  private printFooter(): void {
+  private printFooter(printType: PrintType): void {
     this.printer.drawLine();
-    this.printer.alignCenter();
 
-    if (this.template.footer?.lines) {
-      this.template.footer.lines.forEach((line) => {
-        this.printer.println(line);
-      });
-    } else {
-      this.printer.println("Σας ευχαριστούμε!");
-      this.printer.println("Καλή όρεξη!");
+    if (printType === "final") {
+      this.printer.alignCenter();
+      if (this.template.footer?.lines) {
+        this.template.footer.lines.forEach((line) => {
+          this.printer.println(line);
+        });
+      } else {
+        this.printer.println("Σας ευχαριστούμε!");
+        this.printer.println("Καλή όρεξη!");
+      }
     }
 
     this.printer.cut();
   }
 
   async printOrder(
-    order: OrderIO,
+    order: OrderIO & { printType: PrintType },
     orderItems: OrderItemIO[]
   ): Promise<boolean> {
     try {
@@ -280,11 +296,11 @@ class OrderPrinterAdapter {
         ? order.user?.restaurant?.currencySymbol
         : "€";
 
-      this.printHeader(order.user?.restaurant);
+      this.printHeader(order.user?.restaurant, order.printType);
       this.printOrderInfo(order);
-      this.printItems(orderItems, order.couvert);
-      this.printTotals(order.finalCost);
-      this.printFooter();
+      this.printItems(orderItems, order.couvert, order.printType);
+      this.printTotals(order.finalCost, order.printType);
+      this.printFooter(order.printType);
 
       await this.printer.execute();
       return true;

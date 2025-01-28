@@ -42,3 +42,8 @@ type OrderPrinters = {
   characterSet?: any;
   orderItems: OrderItemIO[];
 };
+
+enum PrintType {
+  PERSONEL = "personel",
+  FINAL = "final",
+}

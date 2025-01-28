@@ -189,8 +189,3 @@ enum PrintLocation {
   BAR = "bar",
   ALL = "all",
 }
-
-enum PrintType {
-  PERSONEL = "personel",
-  FINAL = "final",
-}
