@@ -13,6 +13,10 @@ interface PrinterConfig {
 }
 
 interface PrinterTemplate {
+  textSettings?: {
+    textSize?: "A" | "B" | "C" | "D";
+    fontType?: "A" | "B";
+  };
   header?: {
     subtitle?: string;
     extraLines?: string[];
@@ -44,6 +48,10 @@ interface PrinterTemplate {
 }
 
 const defaultTemplate: PrinterTemplate = {
+  textSettings: {
+    textSize: "B",
+    fontType: "A",
+  },
   orderInfo: {
     showOrderNumber: true,
     showDate: true,
@@ -66,7 +74,7 @@ const defaultTemplate: PrinterTemplate = {
     totalLabel: "ΣΥΝΟΛΟ",
   },
   footer: {
-    lines: ["Σας ευχαριστούμε!", "Καλή όρεξη!"],
+    lines: [],
   },
 };
 
@@ -178,7 +186,7 @@ class OrderPrinterAdapter {
       // Print properties
       if (item.itemPropertyOfItem.length > 0) {
         item.itemPropertyOfItem.forEach((prop) => {
-          const propText = `  - ${prop.itemProperty.propertyName}: ${prop.itemProperty.propertyValue}`;
+          const propText = `  - ${prop.itemProperty.propertyValue}`;
           this.printer.println(propText);
         });
       }
@@ -187,6 +195,8 @@ class OrderPrinterAdapter {
       if (item.comment) {
         this.printer.println(`  * ${item.comment}`);
       }
+
+      this.printer.println("");
     });
   }
 
@@ -218,7 +228,7 @@ class OrderPrinterAdapter {
       });
     }
 
-    this.printer.drawLine();
+    this.printer.drawLine("*");
   }
 
   private printOrderInfo(order: OrderIO): void {
@@ -227,7 +237,7 @@ class OrderPrinterAdapter {
 
     if (info.showOrderNumber && order.uniqueId) {
       this.printer.println(
-        `${info.orderNumberLabel || "Αριθμός Παραγγελίας"}: #${order.uniqueId}`
+        `${info.orderNumberLabel || "Αριθμός Παραγγελίας"}: ${order.uniqueId}`
       );
     }
     if (info.showDate && order.createdAt) {
@@ -287,6 +297,7 @@ class OrderPrinterAdapter {
     orderItems: OrderItemIO[]
   ): Promise<boolean> {
     try {
+      if (!orderItems?.length) return false;
       const isConnected = await this.printer.isPrinterConnected();
       if (!isConnected) {
         throw new Error("Printer not connected");
@@ -296,11 +307,46 @@ class OrderPrinterAdapter {
         ? order.user?.restaurant?.currencySymbol
         : "€";
 
+      if (order.printType === "personel") {
+        switch (this.template?.textSettings?.textSize) {
+          case "A":
+            this.printer.setTextSize(0, 0);
+            break;
+          case "B":
+            this.printer.setTextDoubleHeight();
+            this.printer.setTextDoubleWidth();
+            break;
+          case "C":
+            this.printer.setTextSize(1, 1);
+            break;
+          case "D":
+            this.printer.setTextSize(2, 2);
+            break;
+          default:
+            this.printer.setTextSize(1, 1);
+            break;
+        }
+
+        switch (this.template.textSettings?.fontType) {
+          case "A":
+            this.printer.setTypeFontA();
+            break;
+          case "B":
+            this.printer.setTypeFontB();
+            break;
+          default:
+            this.printer.setTypeFontB();
+            break;
+        }
+      }
+
       this.printHeader(order.user?.restaurant, order.printType);
       this.printOrderInfo(order);
       this.printItems(orderItems, order.couvert, order.printType);
       this.printTotals(order.finalCost, order.printType);
       this.printFooter(order.printType);
+
+      this.printer.setTextNormal();
 
       await this.printer.execute();
       return true;

@@ -17,6 +17,11 @@ export const printOrder = async (order: OrderIO) => {
   console.log(availablePrinters, "availablePrinters");
   for (const printer of printerToPrint) {
     if (!order.orderPrinters?.length) {
+      //If no printer in order skip
+      continue;
+    }
+    if (!printer.orderItems?.length) {
+      //If no orderItems for this printer skip
       continue;
     }
     let availablePrinter = availablePrinters.find((e) => e.mac === printer.mac);
