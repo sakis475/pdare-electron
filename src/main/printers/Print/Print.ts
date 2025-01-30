@@ -2,6 +2,7 @@ import {
   ThermalPrinter,
   PrinterTypes,
   CharacterSet,
+  BreakLine,
 } from "node-thermal-printer";
 
 interface PrinterConfig {
@@ -107,12 +108,39 @@ class OrderPrinterAdapter {
     });
   }
 
+  private tranformText(text: string) {
+    text = text.normalize("NFD");
+
+    text = text.replace(/[\u0300-\u036f]/g, "");
+
+    text = text.toUpperCase();
+
+    return text;
+  }
+
+  private printLn(text: string) {
+    text = this.tranformText(text);
+    this.printer.println(text);
+  }
+
+  private printItemLine(text: string, price: string): void {
+    text = this.tranformText(text);
+
+    this.printer.leftRight(text, price);
+  }
+
   private drawLine(printType: PrintType): void {
     this.printer.setTextNormal();
     this.printer.drawLine();
     if (printType === "personel") {
       this.setDefaultTextSize();
     }
+  }
+
+  private drawDot(): void {
+    this.printer.alignCenter();
+    this.printer.println("");
+    this.printer.alignLeft();
   }
 
   private formatDate(dateString: string): string {
@@ -143,7 +171,7 @@ class OrderPrinterAdapter {
       this.printer.setTextDoubleHeight();
       this.printer.setTextDoubleWidth();
       this.printer.bold(true);
-      this.printer.println(this.template.orderTitle || "ΑΝΑΛΥΣΗ ΠΑΡΑΓΓΕΛΙΑΣ");
+      this.printLn(this.template.orderTitle || "ΑΝΑΛΥΣΗ ΠΑΡΑΓΓΕΛΙΑΣ");
       this.printer.bold(false);
       this.printer.setTextNormal();
       this.printer.alignLeft();
@@ -158,11 +186,12 @@ class OrderPrinterAdapter {
           `${couvert}x ${couvertText}`,
           `${couvert.toFixed(2)}${this.currency}`
         );
+        this.drawDot();
       } else {
-        this.printer.println(`${couvert}x ${couvertText}`);
+        this.printLn(`${couvert}x ${couvertText}`);
+        this.drawDot();
       }
     }
-
     // Print items
     orderItems.forEach((item) => {
       const text = `${item.quantity}x ${item.item.title}`;
@@ -180,7 +209,7 @@ class OrderPrinterAdapter {
             if (index === lines.length - 1) {
               this.printItemLine(line.trim(), price);
             } else {
-              this.printer.println(line.trim());
+              this.printLn(line.trim());
             }
           });
         } else {
@@ -188,28 +217,24 @@ class OrderPrinterAdapter {
         }
       } else {
         // For personnel print, use full width
-        this.printer.println(text);
+        this.printLn(text);
       }
 
       // Print properties
       if (item.itemPropertyOfItem.length > 0) {
         item.itemPropertyOfItem.forEach((prop) => {
           const propText = `  - ${prop.itemProperty.propertyValue}`;
-          this.printer.println(propText);
+          this.printLn(propText);
         });
       }
 
       // Print comment
       if (item.comment) {
-        this.printer.println(`  * ${item.comment}`);
+        this.printLn(`  * ${item.comment}`);
       }
 
-      this.printer.println("");
+      this.drawDot();
     });
-  }
-
-  private printItemLine(text: string, price: string): void {
-    this.printer.leftRight(text, price);
   }
 
   private printHeader(
@@ -222,17 +247,17 @@ class OrderPrinterAdapter {
     this.printer.setTextDoubleHeight();
     this.printer.setTextDoubleWidth();
     this.printer.bold(true);
-    this.printer.println(restaurant.restaurantName);
+    this.printLn(restaurant.restaurantName);
     this.printer.bold(false);
     this.printer.setTextNormal();
 
     if (this.template.header?.subtitle) {
-      this.printer.println(this.template.header.subtitle);
+      this.printLn(this.template.header.subtitle);
     }
 
     if (this.template.header?.extraLines) {
       this.template.header.extraLines.forEach((line) => {
-        this.printer.println(line);
+        this.printLn(line);
       });
     }
 
@@ -244,27 +269,25 @@ class OrderPrinterAdapter {
     const info = this.template.orderInfo || {};
 
     if (info.showOrderNumber && order.uniqueId) {
-      this.printer.println(
+      this.printLn(
         `${info.orderNumberLabel || "Αριθμός Παραγγελίας"}: ${order.uniqueId}`
       );
     }
     if (info.showDate && order.createdAt) {
-      this.printer.println(
+      this.printLn(
         `${info.dateLabel || "Ημερομηνία"}: ${this.formatDate(order.createdAt)}`
       );
     }
     if (info.showTime && order.createdAt) {
-      this.printer.println(
+      this.printLn(
         `${info.timeLabel || "Ώρα"}: ${this.formatTime(order.createdAt)}`
       );
     }
     if (info.showTable) {
-      this.printer.println(
-        `${info.tableLabel || "Τραπέζι"}: ${order.table.tableName}`
-      );
+      this.printLn(`${info.tableLabel || "Τραπέζι"}: ${order.table.tableName}`);
     }
     if (info.showServer && order.user?.displayName) {
-      this.printer.println(
+      this.printLn(
         `${info.serverLabel || "Σερβιτόρος"}: ${order.user.displayName}`
       );
     }
@@ -289,11 +312,8 @@ class OrderPrinterAdapter {
       this.printer.alignCenter();
       if (this.template.footer?.lines) {
         this.template.footer.lines.forEach((line) => {
-          this.printer.println(line);
+          this.printLn(line);
         });
-      } else {
-        this.printer.println("Σας ευχαριστούμε!");
-        this.printer.println("Καλή όρεξη!");
       }
     }
 
