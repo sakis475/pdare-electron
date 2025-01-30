@@ -95,6 +95,8 @@ class OrderPrinterAdapter {
 
     this.template = { ...defaultTemplate, ...template };
 
+    console.log(this.template, "this.template");
+
     const interfaceprinter = `tcp://${this.config.printerIP}${
       this.config.printerPort ? ":" + this.config.printerPort : ""
     }`;
@@ -228,7 +230,7 @@ class OrderPrinterAdapter {
       });
     }
 
-    this.printer.drawLine("*");
+    this.printer.drawLine();
   }
 
   private printOrderInfo(order: OrderIO): void {

@@ -65,12 +65,65 @@ export const printOrder = async (order: OrderIO) => {
         ? printer.characterSet
         : CharacterSet.PC737_GREEK;
 
-      const printerAdapter = new OrderPrinterAdapter({
-        printerIP,
-        printerPort: portString,
-        printerType: PrinterTypes.EPSON,
-        characterSet,
-      });
+      const templateGreek = {
+        orderInfo: {
+          showOrderNumber: true,
+          showDate: true,
+          showTime: true,
+          showTable: true,
+          showServer: true,
+          orderNumberLabel: "Αριθμός Παραγγελίας",
+          dateLabel: "Ημερομηνία",
+          timeLabel: "Ώρα",
+          tableLabel: "Τραπέζι",
+          serverLabel: "Σερβιτόρος",
+          dateFormat: "dd/MM/yyyy",
+          timeFormat: "HH:mm",
+        },
+        orderTitle: "ΑΝΑΛΥΣΗ ΠΑΡΑΓΓΕΛΙΑΣ",
+        items: {
+          couvertText: "Κουβέρ",
+        },
+        totals: {
+          totalLabel: "ΣΥΝΟΛΟ",
+        },
+      };
+
+      const templateEnglish = {
+        orderInfo: {
+          showOrderNumber: true,
+          showDate: true,
+          showTime: true,
+          showTable: true,
+          showServer: true,
+          orderNumberLabel: "Order Number",
+          dateLabel: "Date",
+          timeLabel: "Time",
+          tableLabel: "Table",
+          serverLabel: "Waiter",
+          dateFormat: "MM/dd/yyyy",
+          timeFormat: "HH:mm",
+        },
+        orderTitle: "ORDER ANALYSIS",
+        items: {
+          couvertText: "Couvert",
+        },
+        totals: {
+          totalLabel: "TOTAL",
+        },
+      };
+
+      const printerAdapter = new OrderPrinterAdapter(
+        {
+          printerIP,
+          printerPort: portString,
+          printerType: PrinterTypes.EPSON,
+          characterSet,
+        },
+        order.user.restaurant?.restaurantLanguage === "lang_en"
+          ? templateEnglish
+          : templateGreek
+      );
       const success = await printerAdapter.printOrder(
         order,
         printer.orderItems

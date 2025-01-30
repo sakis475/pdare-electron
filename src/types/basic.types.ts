@@ -54,6 +54,7 @@ interface Restaurant {
   restaurantName: string;
   couvertCost: number;
   currencySymbol: string;
+  restaurantLanguage?: string;
 }
 
 interface Item {
