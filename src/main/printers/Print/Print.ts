@@ -95,8 +95,6 @@ class OrderPrinterAdapter {
 
     this.template = { ...defaultTemplate, ...template };
 
-    console.log(this.template, "this.template");
-
     const interfaceprinter = `tcp://${this.config.printerIP}${
       this.config.printerPort ? ":" + this.config.printerPort : ""
     }`;
@@ -107,6 +105,14 @@ class OrderPrinterAdapter {
       removeSpecialCharacters: false,
       options: { timeout: this.config.timeout },
     });
+  }
+
+  private drawLine(printType: PrintType): void {
+    this.printer.setTextNormal();
+    this.printer.drawLine();
+    if (printType === "personel") {
+      this.setDefaultTextSize();
+    }
   }
 
   private formatDate(dateString: string): string {
@@ -141,7 +147,7 @@ class OrderPrinterAdapter {
       this.printer.bold(false);
       this.printer.setTextNormal();
       this.printer.alignLeft();
-      this.printer.drawLine();
+      this.drawLine(printType);
     }
 
     // Print Couvert
@@ -230,7 +236,7 @@ class OrderPrinterAdapter {
       });
     }
 
-    this.printer.drawLine();
+    this.drawLine(printType);
   }
 
   private printOrderInfo(order: OrderIO): void {
@@ -263,13 +269,13 @@ class OrderPrinterAdapter {
       );
     }
 
-    this.printer.drawLine();
+    this.drawLine(order.printType);
   }
 
   private printTotals(final: number, printType: PrintType): void {
     if (printType === "personel") return;
 
-    this.printer.drawLine();
+    this.drawLine(printType);
     this.printer.bold(true);
     const totalLabel = this.template.totals?.totalLabel || "ΣΥΝΟΛΟ";
     this.printItemLine(`${totalLabel}:`, `${final.toFixed(2)}${this.currency}`);
@@ -277,7 +283,7 @@ class OrderPrinterAdapter {
   }
 
   private printFooter(printType: PrintType): void {
-    this.printer.drawLine();
+    this.drawLine(printType);
 
     if (printType === "final") {
       this.printer.alignCenter();
@@ -292,6 +298,38 @@ class OrderPrinterAdapter {
     }
 
     this.printer.cut();
+  }
+
+  private setDefaultTextSize() {
+    switch (this.template?.textSettings?.textSize) {
+      case "A":
+        this.printer.setTextSize(0, 0);
+        break;
+      case "B":
+        this.printer.setTextDoubleHeight();
+        this.printer.setTextDoubleWidth();
+        break;
+      case "C":
+        this.printer.setTextSize(1, 1);
+        break;
+      case "D":
+        this.printer.setTextSize(2, 2);
+        break;
+      default:
+        this.printer.setTextSize(1, 1);
+        break;
+    }
+    switch (this.template.textSettings?.fontType) {
+      case "A":
+        this.printer.setTypeFontA();
+        break;
+      case "B":
+        this.printer.setTypeFontB();
+        break;
+      default:
+        this.printer.setTypeFontB();
+        break;
+    }
   }
 
   async printOrder(
@@ -310,36 +348,7 @@ class OrderPrinterAdapter {
         : "€";
 
       if (order.printType === "personel") {
-        switch (this.template?.textSettings?.textSize) {
-          case "A":
-            this.printer.setTextSize(0, 0);
-            break;
-          case "B":
-            this.printer.setTextDoubleHeight();
-            this.printer.setTextDoubleWidth();
-            break;
-          case "C":
-            this.printer.setTextSize(1, 1);
-            break;
-          case "D":
-            this.printer.setTextSize(2, 2);
-            break;
-          default:
-            this.printer.setTextSize(1, 1);
-            break;
-        }
-
-        switch (this.template.textSettings?.fontType) {
-          case "A":
-            this.printer.setTypeFontA();
-            break;
-          case "B":
-            this.printer.setTypeFontB();
-            break;
-          default:
-            this.printer.setTypeFontB();
-            break;
-        }
+        this.setDefaultTextSize();
       }
 
       this.printHeader(order.user?.restaurant, order.printType);
