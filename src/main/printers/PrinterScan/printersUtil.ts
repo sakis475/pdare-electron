@@ -23,15 +23,3 @@ export async function findPrinters() {
     console.error("Error scanning printers:", error);
   }
 }
-
-// Example with periodic scanning
-export async function monitorPrinters(intervalMinutes: number = 5) {
-  //   const printerScanner = new SearchPrinters();
-  //   // Initial scan
-  //   await findPrinters();
-  //   // Set up periodic scanning
-  //   setInterval(async () => {
-  //     console.log("\nPerforming periodic printer scan...");
-  //     await findPrinters();
-  //   }, intervalMinutes * 60 * 1000);
-}

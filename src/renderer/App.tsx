@@ -100,7 +100,13 @@ const App: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
+    <div
+      style={{
+        height: "100vh",
+        backgroundColor: "#f5f5f5",
+        overflow: "hidden",
+      }}
+    >
       {/* Status Bar */}
       <div
         style={{
@@ -159,7 +165,8 @@ const App: React.FC = () => {
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: "calc(100vh - 60px)",
+          height: "calc(100vh - 60px)",
+          overflow: "hidden",
         }}
       >
         {errorMessage && (

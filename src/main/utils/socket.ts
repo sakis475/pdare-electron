@@ -52,7 +52,6 @@ class SocketService {
       }
 
       this.debugLog("Initializing socket connection...");
-      console.log(this.connectionData, "this.connectionData");
       this.socket = io(BASE_DOMAIN, {
         forceNew: true,
         timeout: 10000,

@@ -66,19 +66,21 @@ export async function fetchAndStoreConnection(
   try {
     // Get connection data from API
     const connectionData = await getConnectionCode(email, password);
-
     // Prepare data for storage with timestamp
     const storedData: StoredConnectionData = {
       data: connectionData,
       timestamp: Date.now(),
     };
-
     // Store in localStorage
     storage.set(STORAGE_KEYS.CONNECTION_DATA, storedData);
-
     return connectionData;
-  } catch (error) {
-    console.error("Error in fetchAndStoreConnection:", error);
+  } catch (error: any) {
+    if (error?.response?.data?.message) {
+      return error.response.data.message;
+    }
+    if (error?.data?.message) {
+      return error.data.message;
+    }
     throw error;
   }
 }

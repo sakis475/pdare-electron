@@ -28,7 +28,6 @@ export async function getConnectionCode(email: string, password: string) {
   const url = "/printerapp/connect";
   console.log("POST " + BASE_URL + url);
   const response = await axios.post(BASE_URL + url, { email, password });
-  console.log(response.data);
 
   return response.data;
 }

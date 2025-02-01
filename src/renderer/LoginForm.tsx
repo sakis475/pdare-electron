@@ -16,6 +16,8 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
+  const [serverError, setServerError] = useState<string>("");
+
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
@@ -55,6 +57,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setServerError(""); // Clear any previous server errors
 
     if (!validateForm()) {
       return;
@@ -63,10 +66,22 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
     try {
       console.log("Logging in with:", formData);
-      await bridge.fetchAndStoreConnection(formData.email, formData.password);
+      const response = await bridge.fetchAndStoreConnection(
+        formData.email,
+        formData.password
+      );
+
+      // If response is a string, it's an error message
+      if (typeof response === "string") {
+        setServerError(response);
+        return;
+      }
+
+      // If we get here, login was successful
       onLoginSuccess();
     } catch (error) {
       console.error("Login error:", error);
+      setServerError("An error occurred during login. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +165,22 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
               </span>
             )}
           </div>
+
+          {serverError && (
+            <div
+              style={{
+                backgroundColor: "#ffebee",
+                color: "#c62828",
+                padding: "10px",
+                borderRadius: "4px",
+                marginBottom: "15px",
+                fontSize: "14px",
+                textAlign: "center",
+              }}
+            >
+              {serverError}
+            </div>
+          )}
 
           <button
             type="submit"
