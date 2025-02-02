@@ -1,6 +1,6 @@
-const net = require("net");
-const os = require("os");
-const { exec } = require("child_process");
+import net from "net";
+import os from "os";
+import { exec } from "child_process";
 import { storage, STORAGE_KEYS } from "../../storage/StorageUtil";
 
 export interface PrinterMap {

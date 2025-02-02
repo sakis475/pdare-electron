@@ -1,0 +1,10 @@
+version: 1.0.0
+files:
+  - url: http://localhost:8000/public/Your%20App%20Name-1.0.0.AppImage
+    sha512: >-
+      7dae4ce52fe859b898550820579a4bdb7fe65e47870a845679d8e63fdfb024fe681cd6b17b5468778733a1e4a00e2e635177fb7964808412a4af18dc700889ba
+    size: 212735792
+path: Your App Name-1.0.0.AppImage
+sha512: >-
+  7dae4ce52fe859b898550820579a4bdb7fe65e47870a845679d8e63fdfb024fe681cd6b17b5468778733a1e4a00e2e635177fb7964808412a4af18dc700889ba
+releaseDate: '2025-02-01T23:43:36.282Z'

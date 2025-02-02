@@ -2,7 +2,6 @@ import {
   ThermalPrinter,
   PrinterTypes,
   CharacterSet,
-  BreakLine,
 } from "node-thermal-printer";
 
 interface PrinterConfig {

@@ -12,7 +12,20 @@
     "productName": "Your App Name",
     "files": [
       "dist/**/*",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "app-update.yml"
+    ],
+    "extraResources": [
+      {
+        "from": "app-update.yml",
+        "to": "app-update.yml"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "http://localhost:8000/public"
+      }
     ],
     "directories": {
       "output": "dist",
@@ -36,8 +49,7 @@
     },
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
       "icon": "build/mywaitericon.png",
       "category": "Utility"
@@ -46,38 +58,36 @@
       "target": [
         "dmg"
       ]
-    }
+    },
+    "asar": true
   },
   "scripts": {
     "clean": "rimraf dist",
     "start": "electron .",
     "build": "npm run clean && tsc && webpack --config webpack.config.js",
     "start:prod": "npm run clean && npm run build && npm run start",
-    "dev": "concurrently \"npm run watch:electron\" \"npm run watch:webpack\" \"npm run start:electron-dev\"",
-    "watch:electron": "tsc -w",
-    "watch:webpack": "webpack --config webpack.config.js --watch",
-    "start:electron-dev": "nodemon --watch dist/src/main --exec electron .",
-    "start:server": "ts-node src/main/main.ts",
     "build:win": "npm run build && npx electron-builder --win",
-    "build:linux": "npm run build && npx electron-builder --linux"
+    "build:linux": "npm run build && npx electron-builder --linux",
+    "generate-update": "node scripts/generate-update.js"
   },
   "dependencies": {
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
     "electron-store": "^8.1.0",
-    "node-printer": "^1.0.4",
+    "electron-updater": "^6.3.9",
+    "electron-log": "^5.3.0",
     "node-thermal-printer": "^4.4.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "socket.io-client": "^4.7.4"
   },
   "devDependencies": {
-    "electron": "^29.0.0",
     "@types/node": "^22.10.7",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "concurrently": "^8.2.2",
     "css-loader": "^6.11.0",
+    "electron": "^29.0.0",
     "electron-builder": "^25.1.8",
     "html-webpack-plugin": "^5.6.3",
     "nodemon": "^3.1.9",
