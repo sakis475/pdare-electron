@@ -38,7 +38,9 @@ function setupAutoUpdater() {
 
   // Enable auto download and install
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  autoUpdater.autoRunAppAfterInstall = false;
 
   // Add detailed logging
   log.info("Current version:", app.getVersion());
