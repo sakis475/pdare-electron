@@ -150,7 +150,7 @@ const App: React.FC = () => {
                   fontSize: "14px",
                 }}
               >
-                Logout2
+                Logout
               </button>
             )}
           </div>
