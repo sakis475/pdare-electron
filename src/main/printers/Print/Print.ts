@@ -292,6 +292,11 @@ class OrderPrinterAdapter {
     }
 
     this.drawLine(order.printType);
+
+    if (order.printType === "personel") {
+      this.drawDot();
+      this.drawDot();
+    }
   }
 
   private printTotals(final: number, printType: PrintType): void {
@@ -315,6 +320,9 @@ class OrderPrinterAdapter {
         });
       }
     }
+
+    this.drawDot();
+    this.drawDot();
 
     this.printer.cut();
   }
@@ -369,6 +377,9 @@ class OrderPrinterAdapter {
       if (order.printType === "personel") {
         this.setDefaultTextSize();
       }
+
+      this.drawDot();
+      this.drawDot();
 
       this.printHeader(order.user?.restaurant, order.printType);
       this.printOrderInfo(order);
