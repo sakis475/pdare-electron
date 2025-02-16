@@ -22,20 +22,15 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
         }
-      ]
+      ],
+      "icon": "build/servetablogowhite.png"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "build/mywaitericon.png",
+      "icon": "build/servetablogowhite.png",
       "category": "Utility"
     },
     "asar": true

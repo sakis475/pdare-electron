@@ -26,7 +26,7 @@ async function createWindow() {
       webSecurity: true,
       devTools: false,
     },
-    icon: path.join(__dirname, "../../../build/mywaitericon.png"),
+    icon: path.join(__dirname, "../../../build/servetablogowhite.png"),
   });
 
   // Enable remote debugging in development
