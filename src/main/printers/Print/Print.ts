@@ -162,7 +162,8 @@ class OrderPrinterAdapter {
   private printItems(
     orderItems: OrderItemIO[],
     couvert: number,
-    printType: PrintType
+    printType: PrintType,
+    restaurant: Restaurant | undefined
   ): void {
     // Print title only for final print
     if (printType === "final") {
@@ -177,13 +178,15 @@ class OrderPrinterAdapter {
       this.drawLine(printType);
     }
 
+    const couvertCost = restaurant?.couvertCost ? restaurant?.couvertCost : 0;
+
     // Print Couvert
     if (couvert > 0) {
       const couvertText = this.template.items?.couvertText || "Κουβέρ";
       if (printType === "final") {
         this.printItemLine(
           `${couvert}x ${couvertText}`,
-          `${couvert.toFixed(2)}${this.currency}`
+          `${couvertCost.toFixed(2)}${this.currency}`
         );
         this.drawDot();
       } else {
@@ -383,7 +386,12 @@ class OrderPrinterAdapter {
 
       this.printHeader(order.user?.restaurant, order.printType);
       this.printOrderInfo(order);
-      this.printItems(orderItems, order.couvert, order.printType);
+      this.printItems(
+        orderItems,
+        order.couvert,
+        order.printType,
+        order.user?.restaurant
+      );
       this.printTotals(order.finalCost, order.printType);
       this.printFooter(order.printType);
 
