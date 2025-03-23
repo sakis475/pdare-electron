@@ -10,7 +10,7 @@
   },
   "build": {
     "appId": "your.app.id",
-    "productName": "Your App Name",
+    "productName": "Serve Tab Printer Service",
     "files": [
       "dist/**/*",
       "node_modules/**/*"
@@ -24,13 +24,13 @@
           ]
         }
       ],
-      "icon": "build/servetablogowhite.png"
+      "icon": "build/servetablogopurple.png"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "build/servetablogowhite.png",
+      "icon": "build/servetablogopurple.png",
       "category": "Utility"
     },
     "asar": true
