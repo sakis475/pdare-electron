@@ -3,6 +3,7 @@ import {
   PrinterTypes,
   CharacterSet,
 } from "node-thermal-printer";
+import dayjs from "../../utils/dayjs";
 
 interface PrinterConfig {
   printerIP: string;
@@ -28,6 +29,7 @@ interface PrinterTemplate {
     showTable?: boolean;
     showServer?: boolean;
     orderNumberLabel?: string;
+    datePrint?: string;
     dateLabel?: string;
     timeLabel?: string;
     tableLabel?: string;
@@ -59,12 +61,13 @@ const defaultTemplate: PrinterTemplate = {
     showTable: true,
     showServer: true,
     orderNumberLabel: "Αριθμός Παραγγελίας",
+    datePrint: "Ημ. Εκτύπωσης",
     dateLabel: "Ημερομηνία",
     timeLabel: "Ώρα",
     tableLabel: "Τραπέζι",
     serverLabel: "Σερβιτόρος",
     dateFormat: "dd/MM/yyyy",
-    timeFormat: "HH:mm",
+    timeFormat: "HH:mm:ss",
   },
   orderTitle: "ΑΝΑΛΥΣΗ ΠΑΡΑΓΓΕΛΙΑΣ",
   items: {
@@ -153,10 +156,8 @@ class OrderPrinterAdapter {
 
   private formatTime(dateString: string): string {
     const date = new Date(dateString);
-    const format = this.template.orderInfo?.timeFormat || "HH:mm";
-    return format
-      .replace("HH", date.getHours().toString().padStart(2, "0"))
-      .replace("mm", date.getMinutes().toString().padStart(2, "0"));
+    const format = this.template.orderInfo?.timeFormat || "HH:mm:ss";
+    return dayjs(date).format(format);
   }
 
   private printItems(
@@ -178,7 +179,12 @@ class OrderPrinterAdapter {
       this.drawLine(printType);
     }
 
-    const couvertCost = restaurant?.couvertCost ? restaurant?.couvertCost : 0;
+    const couvertCost =
+      typeof restaurant?.couvertCost === "string"
+        ? restaurant?.couvertCost
+        : typeof restaurant?.couvertCost === "number"
+        ? +restaurant?.couvertCost.toFixed(2)
+        : "0.00";
 
     // Print Couvert
     if (couvert > 0) {
@@ -186,7 +192,7 @@ class OrderPrinterAdapter {
       if (printType === "final") {
         this.printItemLine(
           `${couvert}x ${couvertText}`,
-          `${couvertCost.toFixed(2)}${this.currency}`
+          `${couvertCost}${this.currency}`
         );
         this.drawDot();
       } else {
@@ -243,7 +249,16 @@ class OrderPrinterAdapter {
     restaurant: Restaurant | undefined,
     printType: PrintType
   ): void {
-    if (!restaurant || printType === "personel") return;
+    if (!restaurant || printType === "personel") {
+      this.printer.setTextNormal();
+      this.printLn(
+        `${this.template.orderInfo?.datePrint} ${this.formatDate(
+          dayjs().toString()
+        )} ${this.formatTime(dayjs().toString())}`
+      );
+      this.setDefaultTextSize();
+      return;
+    }
 
     this.printer.alignCenter();
     this.printer.setTextDoubleHeight();
