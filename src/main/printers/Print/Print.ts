@@ -181,9 +181,9 @@ class OrderPrinterAdapter {
 
     const couvertCost =
       typeof restaurant?.couvertCost === "string"
-        ? restaurant?.couvertCost
+        ? (parseFloat(restaurant.couvertCost) * couvert).toFixed(2)
         : typeof restaurant?.couvertCost === "number"
-        ? +restaurant?.couvertCost.toFixed(2)
+        ? (restaurant.couvertCost * couvert).toFixed(2)
         : "0.00";
 
     // Print Couvert
